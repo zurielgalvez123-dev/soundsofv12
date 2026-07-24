@@ -581,3 +581,4 @@ body::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opac
 @keyframes preIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
 .brand .markw{height:22px;width:auto;border-radius:0}
 @media(prefers-reduced-motion:reduce){.lgx img,.lgx .sweep{animation:none}}
+.buy-btn{display:block;margin-top:12px;padding:11px 0;background:var(--bone);color:#0a0a0b;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center;text-decoration:none;transition:background .18s,box-shadow .18s}.buy-btn:hover{background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.25),0 10px 30px -8px rgba(0,0,0,.6)}
