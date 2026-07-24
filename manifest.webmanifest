@@ -1,0 +1,15 @@
+{
+  "name": "SoundsOfV12 — Rari Nation",
+  "short_name": "V12",
+  "description": "Home base for V12 and the Rari's. Music, live streams, drops, and the crew.",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050506",
+  "theme_color": "#050506",
+  "icons": [
+    { "src": "assets/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
