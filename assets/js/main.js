@@ -6,17 +6,21 @@
 (function () {
   'use strict';
 
-  /* ---------- CONFIG (edit these when accounts are live) ---------- */
+  /* ---------- CONFIG ---------- */
   var CFG = {
     tiktok: 'https://www.tiktok.com/@soundsofv12',
-    // Paste the real capture endpoint here (Formspree / Cloudflare Worker /
-    // Apps Script). While this is empty the form does NOT claim a signup
-    // succeeded — it tells the visitor signups aren't open yet, because
-    // nothing is actually being delivered anywhere.
+    // Signups go to Supabase when assets/js/config.js is filled in.
+    // joinEndpoint is an optional override for a different capture
+    // service (Formspree, a Worker, etc.) and takes precedence.
+    // With neither configured the form does NOT claim success — it
+    // says signups aren't open, because nothing is delivered anywhere.
     joinEndpoint: '',
     // When live, flip via localStorage 'v12_live'='1' OR a real API poll.
     liveOverride: null           // true / false to force; null = auto (localStorage)
   };
+
+  var SUPA = window.V12_SUPA || null;
+  var TABLES = (window.V12_CONFIG && window.V12_CONFIG.tables) || {};
 
   /* ---------- helpers ---------- */
   function $(s, r) { return (r || document).querySelector(s); }
@@ -78,30 +82,42 @@
         if (btn) { btn.disabled = false; btn.textContent = btnTxt; }
       }
 
-      // No endpoint wired = nothing is delivered anywhere. Say so rather
+      // Nothing configured = nothing is delivered anywhere. Say so rather
       // than telling the visitor to check an inbox that will stay empty.
-      if (!CFG.joinEndpoint) {
+      if (!CFG.joinEndpoint && !SUPA) {
         show("Signups open in a moment — follow <a href='https://www.instagram.com/soundsofv12/'>@soundsofv12</a> and you won't miss the first drop.");
         return;
       }
 
       if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
-      fetch(CFG.joinEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(payload)
-      }).then(function (r) {
-        if (!r.ok) throw new Error('bad status ' + r.status);
+      function ok() {
         try {
           var list = JSON.parse(store('v12_raris') || '[]');
           list.push(payload); store('v12_raris', JSON.stringify(list));
         } catch (e2) {}
         show("🏁 You're in, Rari. Check your inbox — first drop, live alerts &amp; unreleased heat incoming.");
         form.reset();
-      }).catch(function () {
+      }
+      function fail() {
         show("That didn't go through. Try again, or DM <a href='https://www.instagram.com/soundsofv12/'>@soundsofv12</a> and we'll add you manually.");
-      }).then(reset, reset);
+      }
+
+      var isEmail = val.indexOf('@') > -1;
+      var req = CFG.joinEndpoint
+        ? fetch(CFG.joinEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(payload)
+          }).then(function (r) { if (!r.ok) throw new Error('bad status ' + r.status); })
+        : SUPA.insert(TABLES.signups || 'rari_signups', {
+            email: isEmail ? val : null,
+            phone: isEmail ? null : val,
+            source_page: here,
+            visitor_id: window.V12_VISITOR || null
+          });
+
+      req.then(ok).catch(fail).then(reset, reset);
     });
     form.querySelector('input') && form.querySelector('input').addEventListener('input', function () { this.style.borderColor = ''; });
   });
