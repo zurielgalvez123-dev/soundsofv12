@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unsubscribe — SoundsOfV12</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Remove your address from SoundsOfV12 email.">
+<link rel="icon" href="assets/img/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Sora:wght@400;600;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<section class="section-sm" style="padding-top:56px">
+  <div class="wrap" style="max-width:560px">
+    <a class="brand" href="index.html" style="margin-bottom:26px;display:inline-flex">
+      <img class="mark markw" src="assets/img/logo-alpha.png" alt="V12" style="width:52px">
+    </a>
+
+    <div class="eyebrow">Email preferences</div>
+    <h1 class="h-lg mt-2">Unsubscribe</h1>
+    <p class="lead mt-2">Put in the address you'd like removed and you're off the list. No hard feelings.</p>
+
+    <div class="formcard mt-3">
+      <form id="unsubform">
+        <div class="frow">
+          <label for="uemail">Email address</label>
+          <input class="inp" id="uemail" type="email" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Remove me</button>
+      </form>
+      <div class="ok-msg" id="unsubok" style="margin-top:14px"></div>
+      <p class="note mt-2" id="unsubnote">
+        Prefer to just reply? Email
+        <a href="mailto:soundsofv12@gmail.com?subject=Unsubscribe">soundsofv12@gmail.com</a>
+        and we'll take care of it.
+      </p>
+    </div>
+
+    <p class="muted small mt-3">
+      This only affects email. <a href="index.html">Back to soundsofv12.com</a>
+    </p>
+  </div>
+</section>
+
+<script src="assets/js/config.js"></script>
+<script>
+(function () {
+  'use strict';
+  var SUPA = window.V12_SUPA || null;
+  var form = document.getElementById('unsubform');
+  var ok = document.getElementById('unsubok');
+  var note = document.getElementById('unsubnote');
+
+  function show(msg) { ok.innerHTML = msg; ok.classList.add('show'); }
+
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var email = document.getElementById('uemail').value.trim();
+    if (!email) return;
+
+    var btn = form.querySelector('button[type=submit]');
+    var label = btn.textContent;
+
+    // With no backend configured we must not claim the address was
+    // removed — nothing would have been recorded. Point at the inbox
+    // that a human actually reads instead.
+    if (!SUPA) {
+      show("Send a quick note to <a href='mailto:soundsofv12@gmail.com?subject=Unsubscribe%20" +
+           encodeURIComponent(email) + "'>soundsofv12@gmail.com</a> and you'll be removed within a day.");
+      note.style.display = 'none';
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Removing…';
+    SUPA.insert((window.V12_CONFIG.tables && window.V12_CONFIG.tables.optouts) || 'email_optouts',
+                { email: email, source: 'unsubscribe_page' })
+      .then(function () {
+        show("Done — " + email.replace(/[<>&]/g, '') + " has been removed.");
+        form.reset();
+      })
+      .catch(function () {
+        show("That didn't go through. Email <a href='mailto:soundsofv12@gmail.com?subject=Unsubscribe'>soundsofv12@gmail.com</a> and we'll remove you manually.");
+      })
+      .then(function () { btn.disabled = false; btn.textContent = label; },
+            function () { btn.disabled = false; btn.textContent = label; });
+  });
+})();
+</script>
+</body>
+</html>

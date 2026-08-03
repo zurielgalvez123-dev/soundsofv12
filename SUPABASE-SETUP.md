@@ -114,6 +114,24 @@ create policy "anyone can vote"
 -- second one. Scoped to your own browser's id.
 create policy "you can change your own vote"
   on public.poll_votes for update to anon using (true) with check (true);
+
+-- ---------- 4. EMAIL OPT-OUTS ----------
+create table if not exists public.email_optouts (
+  id         bigint generated always as identity primary key,
+  email      text not null,
+  source     text,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists email_optouts_key
+  on public.email_optouts (lower(email));
+
+alter table public.email_optouts enable row level security;
+
+-- Anyone can opt themselves out. As with signups there is NO select
+-- policy, so the list cannot be read back out by a visitor.
+create policy "anyone can opt out"
+  on public.email_optouts for insert to anon with check (true);
 ```
 
 ## 3. Paste the two keys in
@@ -159,6 +177,9 @@ To wipe something permanently, use the SQL Editor:
 ```sql
 delete from public.wall_posts where id = 123;
 ```
+
+**Check who opted out before any send.** The campaign script does this
+automatically, but to look manually: Table Editor → `email_optouts`.
 
 **See poll results:**
 

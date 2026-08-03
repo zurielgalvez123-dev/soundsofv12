@@ -21,7 +21,8 @@ window.V12_CONFIG = {
   tables: {
     signups: 'rari_signups',
     wall: 'wall_posts',
-    votes: 'poll_votes'
+    votes: 'poll_votes',
+    optouts: 'email_optouts'
   }
 };
 
