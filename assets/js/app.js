@@ -3,7 +3,7 @@
 
    Runs in one of two modes:
 
-   LIVE  — window.V12_SUPA is configured (see assets/js/config.js).
+   LIVE  — window.V12_API is configured (see assets/js/config.js).
            Posts and votes are shared across every fan, in real tables.
    LOCAL — no backend configured yet. Everything stays in this one
            browser and the UI says so plainly. No invented posts and
@@ -13,8 +13,7 @@
 (function () {
   'use strict';
 
-  var SUPA = window.V12_SUPA || null;
-  var T = (window.V12_CONFIG && window.V12_CONFIG.tables) || {};
+  var API = window.V12_API || null;
   var ME = window.V12_VISITOR || 'anon';
 
   function $(s, r) { return (r || document).querySelector(s); }
@@ -25,11 +24,21 @@
   function initials(n) { return (n || 'R').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase(); }
   function ago(ts) {
     var s = (Date.now() - ts) / 1000;
-    if (s < 0) s = 0;
+    if (!isFinite(s) || s < 0) s = 0;
     if (s < 60) return 'just now';
     if (s < 3600) return Math.floor(s / 60) + 'm';
     if (s < 86400) return Math.floor(s / 3600) + 'h';
     return Math.floor(s / 86400) + 'd';
+  }
+  // SQLite datetime('now') returns "YYYY-MM-DD HH:MM:SS" in UTC with no
+  // zone marker; Safari refuses to parse that shape at all, and Chrome
+  // reads it as local time. Normalise before handing it to Date.
+  function parseTs(v) {
+    if (!v) return Date.now();
+    var iso = String(v).replace(' ', 'T');
+    if (!/[Zz]|[+-]\d{2}:?\d{2}$/.test(iso)) iso += 'Z';
+    var t = Date.parse(iso);
+    return isNaN(t) ? Date.now() : t;
   }
 
   /* ---------------- FAN WALL ----------------
@@ -41,7 +50,7 @@
   if (wall) {
     var LOCAL_KEY = 'v12_wall';
 
-    function render(posts, localOnly) {
+    var render = function (posts, localOnly) {
       if (!posts.length) {
         wall.innerHTML = '<div class="wallpost wallempty">' +
           '<p><b>Nobody\'s signed it yet.</b> Be the first name on the wall — ' +
@@ -56,27 +65,22 @@
           (mine ? ' · <i>you</i>' : '') + '</span></div></div><p>' + esc(p.text) + '</p></div>';
       }).join('') + (localOnly ? '<div class="wallpost wallempty"><p>' +
           'Only you can see this — the shared wall isn\'t switched on yet.</p></div>' : '');
-    }
+    };
 
-    function loadLocal() {
-      var posts = get(LOCAL_KEY, []).slice().sort(function (a, b) { return b.ts - a.ts; });
-      render(posts, true);
-    }
+    var loadLocal = function () {
+      render(get(LOCAL_KEY, []).slice().sort(function (a, b) { return b.ts - a.ts; }), true);
+    };
 
-    function loadLive() {
-      SUPA.select(T.wall || 'wall_posts',
-        'select=name,city,text,created_at,visitor_id&hidden=eq.false&order=created_at.desc&limit=60')
-        .then(function (rows) {
-          render(rows.map(function (r) {
-            return { name: r.name, city: r.city, text: r.text, visitor_id: r.visitor_id,
-                     ts: Date.parse(r.created_at) };
-          }), false);
-        })
-        .catch(function () { loadLocal(); });
-    }
+    var loadLive = function () {
+      API.wall().then(function (d) {
+        render((d.posts || []).map(function (r) {
+          return { name: r.name, city: r.city, text: r.text,
+                   visitor_id: r.visitor_id, ts: parseTs(r.created_at) };
+        }), false);
+      }).catch(loadLocal);
+    };
 
-    var loadWall = SUPA ? loadLive : loadLocal;
-    loadWall();
+    if (API) loadLive(); else loadLocal();
 
     var wf = $('#wallform');
     wf && wf.addEventListener('submit', function (ev) {
@@ -96,7 +100,7 @@
         }
       }
 
-      if (!SUPA) {
+      if (!API) {
         var posts = get(LOCAL_KEY, []);
         posts.push({ name: name, city: city, text: text, ts: Date.now(), visitor_id: ME });
         set(LOCAL_KEY, posts);
@@ -106,22 +110,19 @@
       }
 
       if (btn) { btn.disabled = true; btn.textContent = 'Posting…'; }
-      SUPA.insert(T.wall || 'wall_posts',
-        { name: name, city: city || null, text: text, visitor_id: ME })
-        .then(function () {
-          wf.reset(); loadLive();
-          done('🏁 Posted! You\'re on the wall, Rari.');
-        })
-        .catch(function () {
-          done('That didn\'t post. Give it another shot in a second.');
+      API.post(name, city, text, ME)
+        .then(function () { wf.reset(); loadLive(); done('🏁 Posted! You\'re on the wall, Rari.'); })
+        .catch(function (e) {
+          done(/slow down/i.test(e.message)
+            ? 'Easy — give it a minute before posting again.'
+            : 'That didn\'t post. Give it another shot in a second.');
         });
     });
   }
 
   /* ---------------- POLLS ----------------
-     Vote counts come from the backend when it's configured. Locally
-     they start at zero. Percentages are meaningless on a handful of
-     votes, so raw counts show until there are enough to be worth one. */
+     Percentages are meaningless on a handful of votes, so raw counts
+     show until there are enough for one to mean anything. */
   var PCT_FLOOR = 20;
 
   $all('[data-poll]').forEach(function (poll) {
@@ -156,56 +157,37 @@
     }
 
     function loadLive() {
-      SUPA.select(T.votes || 'poll_votes', 'select=choice,visitor_id&poll=eq.' + encodeURIComponent(id) + '&limit=5000')
-        .then(function (rows) {
-          opts.forEach(function (o) { votes[o.getAttribute('data-opt')] = 0; });
-          mine = null;
-          rows.forEach(function (r) {
-            if (r.choice in votes) votes[r.choice]++;
-            if (r.visitor_id === ME) mine = r.choice;
-          });
-          paint();
-        })
-        .catch(function () { loadLocal(); });
+      API.votes(id, ME).then(function (d) {
+        opts.forEach(function (o) { votes[o.getAttribute('data-opt')] = 0; });
+        for (var k in (d.tally || {})) if (k in votes) votes[k] = d.tally[k];
+        mine = d.mine || null;
+        paint();
+      }).catch(loadLocal);
     }
 
-    if (SUPA) loadLive(); else loadLocal();
+    if (API) loadLive(); else loadLocal();
 
     opts.forEach(function (o) {
       o.addEventListener('click', function () {
         var k = o.getAttribute('data-opt');
         if (mine === k) return;
 
-        if (!SUPA) {
+        if (!API) {
           if (mine) votes[mine]--;
           votes[k] = (votes[k] || 0) + 1;
           mine = k; set(key, { votes: votes, mine: mine }); paint();
           return;
         }
 
-        // Optimistic paint, then reconcile against the server.
+        // Paint optimistically, then reconcile against the server; roll
+        // back if the write failed so the UI never claims a vote landed
+        // when it didn't.
         var prev = mine;
         if (prev) votes[prev]--;
         votes[k] = (votes[k] || 0) + 1;
         mine = k; paint();
 
-        // upsert on (poll, visitor_id) so changing your mind moves the
-        // vote instead of adding a second one
-        fetch((window.V12_CONFIG.supabaseUrl.replace(/\/+$/, '')) + '/rest/v1/' + (T.votes || 'poll_votes') +
-              '?on_conflict=poll,visitor_id', {
-          method: 'POST',
-          headers: {
-            'apikey': window.V12_CONFIG.supabaseAnonKey,
-            'Authorization': 'Bearer ' + window.V12_CONFIG.supabaseAnonKey,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=minimal'
-          },
-          body: JSON.stringify({ poll: id, choice: k, visitor_id: ME })
-        }).then(function (r) {
-          if (!r.ok) throw new Error(r.status);
-          loadLive();
-        }).catch(function () {
-          // roll back the optimistic update
+        API.vote(id, k, ME).then(loadLive).catch(function () {
           votes[k]--; if (prev) votes[prev]++;
           mine = prev; paint();
         });

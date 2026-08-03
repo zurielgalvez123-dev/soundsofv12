@@ -25,4 +25,12 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
+# Not for indexing — admin console and the unsubscribe form.
+# admin.html is token-gated server-side; this just keeps it out of
+# search results, it is not the access control.
+User-agent: *
+Disallow: /admin.html
+Disallow: /unsubscribe.html
+Disallow: /backend/
+
 Sitemap: https://soundsofv12.com/sitemap.xml

@@ -1,0 +1,14 @@
+name = "soundsofv12-api"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+# Fill database_id in after running:
+#   npx wrangler d1 create soundsofv12
+[[d1_databases]]
+binding = "DB"
+database_name = "soundsofv12"
+database_id = ""
+
+# Set DEV = "1" only for local testing; it relaxes CORS to localhost.
+[vars]
+DEV = "0"

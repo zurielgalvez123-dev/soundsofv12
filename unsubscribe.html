@@ -49,7 +49,7 @@
 <script>
 (function () {
   'use strict';
-  var SUPA = window.V12_SUPA || null;
+  var API = window.V12_API || null;
   var form = document.getElementById('unsubform');
   var ok = document.getElementById('unsubok');
   var note = document.getElementById('unsubnote');
@@ -67,7 +67,7 @@
     // With no backend configured we must not claim the address was
     // removed — nothing would have been recorded. Point at the inbox
     // that a human actually reads instead.
-    if (!SUPA) {
+    if (!API) {
       show("Send a quick note to <a href='mailto:soundsofv12@gmail.com?subject=Unsubscribe%20" +
            encodeURIComponent(email) + "'>soundsofv12@gmail.com</a> and you'll be removed within a day.");
       note.style.display = 'none';
@@ -75,8 +75,7 @@
     }
 
     btn.disabled = true; btn.textContent = 'Removing…';
-    SUPA.insert((window.V12_CONFIG.tables && window.V12_CONFIG.tables.optouts) || 'email_optouts',
-                { email: email, source: 'unsubscribe_page' })
+    API.optout(email, 'unsubscribe_page')
       .then(function () {
         show("Done — " + email.replace(/[<>&]/g, '') + " has been removed.");
         form.reset();
