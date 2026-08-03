@@ -9,8 +9,11 @@
   /* ---------- CONFIG (edit these when accounts are live) ---------- */
   var CFG = {
     tiktok: 'https://www.tiktok.com/@soundsofv12',
-    // Set to a real endpoint (Formspree/Beehiiv/your API) to capture for real.
-    joinEndpoint: '',            // '' = demo mode (stores locally, shows success)
+    // Paste the real capture endpoint here (Formspree / Cloudflare Worker /
+    // Apps Script). While this is empty the form does NOT claim a signup
+    // succeeded — it tells the visitor signups aren't open yet, because
+    // nothing is actually being delivered anywhere.
+    joinEndpoint: '',
     // When live, flip via localStorage 'v12_live'='1' OR a real API poll.
     liveOverride: null           // true / false to force; null = auto (localStorage)
   };
@@ -63,36 +66,59 @@
       }
       var okBox = form.parentNode.querySelector('.ok-msg');
       var payload = { contact: val, ts: Date.now(), page: here };
+      var btn = form.querySelector('button[type=submit]');
+      var btnTxt = btn && btn.textContent;
 
-      function done() {
+      function show(msg) {
+        if (!okBox) return;
+        okBox.innerHTML = msg;
+        okBox.classList.add('show');
+      }
+      function reset() {
+        if (btn) { btn.disabled = false; btn.textContent = btnTxt; }
+      }
+
+      // No endpoint wired = nothing is delivered anywhere. Say so rather
+      // than telling the visitor to check an inbox that will stay empty.
+      if (!CFG.joinEndpoint) {
+        show("Signups open in a moment — follow <a href='https://www.instagram.com/soundsofv12/'>@soundsofv12</a> and you won't miss the first drop.");
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+      fetch(CFG.joinEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function (r) {
+        if (!r.ok) throw new Error('bad status ' + r.status);
         try {
           var list = JSON.parse(store('v12_raris') || '[]');
           list.push(payload); store('v12_raris', JSON.stringify(list));
         } catch (e2) {}
-        var n = 1;
-        try { n = JSON.parse(store('v12_raris') || '[]').length; } catch (e3) {}
-        if (okBox) {
-          okBox.innerHTML = "🏁 You're in, Rari. Check your inbox — first drop, live alerts & unreleased heat incoming.";
-          okBox.classList.add('show');
-        }
+        show("🏁 You're in, Rari. Check your inbox — first drop, live alerts &amp; unreleased heat incoming.");
         form.reset();
-      }
-
-      if (CFG.joinEndpoint) {
-        fetch(CFG.joinEndpoint, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        }).then(done).catch(done);
-      } else { done(); }
+      }).catch(function () {
+        show("That didn't go through. Try again, or DM <a href='https://www.instagram.com/soundsofv12/'>@soundsofv12</a> and we'll add you manually.");
+      }).then(reset, reset);
     });
     form.querySelector('input') && form.querySelector('input').addEventListener('input', function () { this.style.borderColor = ''; });
   });
 
-  /* ---------- Rari counter (social proof, local demo) ---------- */
+  /* ---------- Rari counter ----------
+     Only renders a member count when a real one is supplied (set
+     window.V12_RARI_COUNT from the backend once signups are wired).
+     Otherwise the whole stat is removed — an invented number is worse
+     than no number. */
   $all('[data-rari-count]').forEach(function (el) {
-    var base = 512; // founder-badge baseline
-    var extra = 0;
-    try { extra = JSON.parse(store('v12_raris') || '[]').length; } catch (e) {}
-    el.textContent = (base + extra).toLocaleString();
+    var real = window.V12_RARI_COUNT;
+    if (typeof real === 'number' && isFinite(real) && real > 0) {
+      el.textContent = real.toLocaleString();
+    } else {
+      var stat = el.closest ? el.closest('.s') : null;
+      if (stat && stat.parentNode) stat.parentNode.removeChild(stat);
+    }
   });
 
   /* ---------- year ---------- */
