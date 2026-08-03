@@ -219,3 +219,42 @@ log in, which would kill participation.
 **Wall posts go live instantly.** There's no approval queue. Length limits are
 enforced in the database, but the first troll gets through and stays up until
 you hide them. Worth watching for the first few weeks.
+
+---
+
+## Email infrastructure (set up 2026-08-03)
+
+Outbound is Resend; inbound is ImprovMX forwarding. Both authenticated on
+`soundsofv12.com`:
+
+| Record | Host | Purpose |
+|---|---|---|
+| SPF | `send` | authorises Resend/SES to send as the domain |
+| SPF | `@` | authorises SES + ImprovMX, blocks root spoofing |
+| DKIM | `resend._domainkey` | signs outbound mail |
+| DMARC | `_dmarc` | `p=none` — monitor only, required by Gmail/Yahoo bulk rules |
+| MX | `send` | SES bounce/complaint handling — **Resend's domain verification depends on this; never remove it** |
+| MX | `@` | ImprovMX inbound forwarding |
+
+**Working inbound aliases** (all forward to `soundsofv12@gmail.com`):
+`team@`, `booking@`, `hello@`, `privacy@`. Verified delivering end-to-end
+2026-08-03 — Gmail returned a 250 accept.
+
+`team@soundsofv12.com` is the Reply-To on outreach. It must stay on the
+domain: a freemail Reply-To against a custom-domain From scores -2.75 on
+SpamAssassin, because that shape is a common scam signature.
+
+ImprovMX credentials live in `~/.v12/credentials.env` (chmod 600, outside
+this repo). Never commit them.
+
+**Deliverability, measured on mail-tester:**
+
+| Change | Score |
+|---|---|
+| branded header template, freemail Reply-To | 5.1/10 |
+| plain template, freemail Reply-To | 7.3/10 |
+| plain template, domain Reply-To + postal address | expected ~10 |
+
+The header image cost ~1.3 points (SpamAssassin's HTML_IMAGE_ONLY rule),
+which is why cold outreach uses the plain template and the branded one is
+reserved for opted-in fan mail.
