@@ -7,7 +7,7 @@ compatibility_date = "2026-08-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "soundsofv12"
-database_id = ""
+database_id = "a79eecd9-b79b-4ecb-a5db-2986dec84d32"
 
 # Set DEV = "1" only for local testing; it relaxes CORS to localhost.
 [vars]

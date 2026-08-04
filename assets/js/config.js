@@ -13,7 +13,7 @@
 window.V12_CONFIG = {
   // e.g. 'https://soundsofv12-api.<your-subdomain>.workers.dev'
   // or a custom route like 'https://api.soundsofv12.com'
-  apiUrl: '',
+  apiUrl: 'https://soundsofv12-api.soundsofv12.workers.dev',
 
   // Set once signups are flowing and you want the real number on the
   // Rari page. Left null, the stat hides itself rather than inventing one.
