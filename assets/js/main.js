@@ -177,8 +177,9 @@
 
 /* ================================================================
    V3.1 — RUMBA background player (global, discreet, persistent)
-   Autoplay when allowed; else starts on first tap. Position and
-   pause-state survive page navigation. Hides itself if no mp3.
+   Autoplay when allowed; else starts on first tap. Position survives
+   page navigation but resets when the tab closes; the mute preference
+   persists. Hides itself if no mp3.
    ================================================================ */
 (function () {
   'use strict';
@@ -196,8 +197,19 @@
   document.body.appendChild(pill);
   var ic = pill.querySelector('.btn-ic');
 
+  // Playback POSITION lives in sessionStorage, so it survives clicking
+  // between pages but resets when the tab closes — a returning visitor
+  // hears RUMBA from the top rather than resuming mid-song weeks later.
+  // The on/off PREFERENCE stays in localStorage: someone who muted the
+  // site once should not have to mute it again on every visit.
+  function getPos() { try { return sessionStorage.getItem('v12_audio_t'); } catch (e) { return null; } }
+  function setPos(v) { try { sessionStorage.setItem('v12_audio_t', v); } catch (e) {} }
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  // One-time cleanup: older builds stored the position in localStorage,
+  // which is why it persisted across sessions. Drop any stale value.
+  try { localStorage.removeItem('v12_audio_t'); } catch (e) {}
 
   function paint() {
     var on = !a.paused;
@@ -208,12 +220,12 @@
   a.addEventListener('pause', paint);
   a.addEventListener('error', function () { pill.classList.add('gone'); });
 
-  // resume position across pages
+  // resume position across pages within this visit only
   a.addEventListener('loadedmetadata', function () {
-    var t = parseFloat(get('v12_audio_t') || '0');
+    var t = parseFloat(getPos() || '0');
     if (isFinite(t) && t > 0 && t < (a.duration || 1e9) - 2) { try { a.currentTime = t; } catch (e) {} }
   });
-  function savePos() { if (a.currentTime > 0) set('v12_audio_t', String(a.currentTime)); }
+  function savePos() { if (a.currentTime > 0) setPos(String(a.currentTime)); }
   setInterval(savePos, 3000);
   window.addEventListener('pagehide', savePos);
   document.addEventListener('visibilitychange', function () { if (document.hidden) savePos(); });

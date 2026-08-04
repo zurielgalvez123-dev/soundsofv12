@@ -340,8 +340,16 @@ body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;
   background:radial-gradient(130% 95% at 50% -12%,transparent 52%,rgba(0,0,0,.6) 100%);}
 body::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
-.nav,.livebanner,.bottombar,.drawer{position:relative;z-index:60}
-.livebanner{z-index:59}.bottombar{z-index:70}.drawer{z-index:80}
+/* Lift the chrome above the body::after noise overlay.
+   This used to also set position:relative on all four, which silently
+   overrode the positioning each one needs: .nav is sticky, .bottombar
+   and .drawer are fixed. The result was a header that scrolled away, a
+   mobile bottom bar parked at the foot of a 7,700px page instead of
+   pinned to the screen, and a drawer that was no longer a full-screen
+   overlay. z-index applies to all three as they are already positioned,
+   so only .livebanner — which sits in normal flow — needs relative. */
+.livebanner{position:relative;z-index:59}
+.nav{z-index:60}.bottombar{z-index:70}.drawer{z-index:80}
 
 /* liquid-chrome text (vertical metallic sheen) */
 .grad-text,.chrome{
@@ -554,7 +562,18 @@ body::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opac
 #v12audio.playing .eq span:nth-child(3){animation-delay:.36s}
 @keyframes eqb{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
 #v12audio.gone{display:none}
-@media(max-width:640px){#v12audio{bottom:calc(var(--bottom-h) + 12px + env(safe-area-inset-bottom,0px))}}
+/* On phones the pill sits above the bottom bar, and collapses to a
+   round icon. A persistent fixed control will always overlap whatever
+   content is behind it; at full width it was covering the hero's
+   "Become a Rari" button — the primary email CTA — so it shrinks to
+   roughly a thumb's width and leaves the button tappable. */
+@media(max-width:640px){
+  #v12audio{bottom:calc(var(--bottom-h) + 12px + env(safe-area-inset-bottom,0px));
+    padding:0;width:46px;height:46px;justify-content:center;gap:0}
+  #v12audio .t{display:none}
+  #v12audio .eq{display:none}
+  #v12audio .btn-ic{width:auto;height:auto;font-size:15px}
+}
 @media print{#v12audio{display:none}}
 
 /* V3.2 — real assets */
