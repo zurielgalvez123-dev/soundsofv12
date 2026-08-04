@@ -57,6 +57,46 @@
   .spark i{flex:1;background:rgba(127,212,204,.32);border-radius:2px 2px 0 0;min-height:2px}
   .spark i.today{background:var(--chr)}
   .note{color:var(--tx3);font-size:12.5px;margin:10px 0 0;line-height:1.55}
+
+  /* manual */
+  .man details{border-top:1px solid var(--line)}
+  .man details:first-of-type{border-top:none}
+  .man summary{cursor:pointer;padding:13px 0;font-size:14px;font-weight:650;
+               list-style:none;display:flex;align-items:center;gap:10px}
+  .man summary::-webkit-details-marker{display:none}
+  .man summary::before{content:"+";color:var(--chr);font-weight:800;font-size:15px;
+                       width:12px;flex:none;text-align:center}
+  .man details[open] summary::before{content:"–"}
+  .man summary:hover{color:var(--chr)}
+  .man .body{padding:0 0 18px 22px;font-size:13.5px;line-height:1.65;color:var(--tx2)}
+  .man .body p{margin:0 0 11px;max-width:66ch}
+  .man .body p:last-child{margin-bottom:0}
+  .man .body strong{color:var(--tx)}
+  .man .scroll{overflow-x:auto;margin:0 0 12px}
+  .man table{border-collapse:collapse;width:100%;font-size:13px;min-width:400px}
+  .man th{text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+          color:var(--tx3);font-weight:800;padding:0 14px 8px 0;border-bottom:1px solid var(--line)}
+  .man td{padding:9px 14px 9px 0;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+  .man td:first-child{color:var(--tx);font-weight:600;white-space:nowrap}
+  .man tr:last-child td{border-bottom:none}
+  .man ul{margin:0 0 11px;padding-left:18px}
+  .man li{margin-bottom:7px}
+  .man code{background:var(--sunk);padding:2px 6px;border-radius:5px;font-size:12.5px;
+            font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+  .man pre{background:var(--sunk);border:1px solid var(--line);border-radius:9px;padding:14px 16px;
+           overflow-x:auto;font-size:12.5px;line-height:1.7;margin:0 0 12px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .man pre .c{color:var(--tx3)}
+  .rule{border-left:2px solid var(--red);background:rgba(240,141,127,.07);
+        padding:13px 16px;border-radius:0 8px 8px 0;margin:0 0 12px}
+  .rule b{display:block;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+          color:var(--red);margin-bottom:6px}
+  .rule p{margin:0;color:var(--tx2)}
+  .tip{border-left:2px solid var(--chr);background:rgba(127,212,204,.06);
+       padding:13px 16px;border-radius:0 8px 8px 0;margin:0 0 12px}
+  .tip p{margin:0;color:var(--tx2)}
+  .tip p+p{margin-top:8px}
+  a{color:var(--chr)}
 </style>
 </head>
 <body>
@@ -104,6 +144,212 @@
         Opt-outs are addresses that asked to stop receiving email. Check this before any send.
       </p>
       <div id="listmsg"></div>
+    </div>
+
+    <h2>Manual</h2>
+    <div class="card man">
+
+      <details>
+        <summary>The five numbers at the top</summary>
+        <div class="body">
+          <p>Running totals since day one. These never reset.</p>
+          <div class="scroll"><table>
+            <thead><tr><th>Number</th><th>What it counts</th><th>Why you'd look</th></tr></thead>
+            <tbody>
+              <tr><td>Signups</td><td>People who gave you an email or phone number.</td><td>Your actual asset — the number that turns into money later.</td></tr>
+              <tr><td>Wall live</td><td>Fan wall posts visible to everyone.</td><td>Proof the site feels alive to a first-time visitor.</td></tr>
+              <tr><td>Wall hidden</td><td>Posts you've hidden.</td><td>Should stay near zero. Climbing means someone is targeting the wall.</td></tr>
+              <tr><td>Votes</td><td>Poll votes cast.</td><td>Cheapest engagement there is — a fan who votes has stopped scrolling.</td></tr>
+              <tr><td>Opt-outs</td><td>People who asked to stop getting email.</td><td>Check before every send.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>The engagement panel</summary>
+        <div class="body">
+          <p>Switch between 7, 30 and 90 days with the buttons at the top of it.</p>
+          <div class="scroll"><table>
+            <thead><tr><th>Number</th><th>Means</th></tr></thead>
+            <tbody>
+              <tr><td>Visitors</td><td>People, not visits. One fan who came back four times is 1.</td></tr>
+              <tr><td>Page views</td><td>Pages opened in total.</td></tr>
+              <tr><td>Views each</td><td>Pages per person. Above 2 means people are exploring rather than bouncing.</td></tr>
+              <tr><td>Signups</td><td>People who joined <strong>in this window</strong> — unlike the running total at the top of the page.</td></tr>
+            </tbody>
+          </table></div>
+          <div class="scroll"><table>
+            <thead><tr><th>List</th><th>Shows</th><th>What to do with it</th></tr></thead>
+            <tbody>
+              <tr><td>Most read pages</td><td>Which pages get opened.</td><td>Your best page deserves the strongest call to action. Your worst is broken or badly linked.</td></tr>
+              <tr><td>Where they came from</td><td>Instagram, Google, direct, or a campaign tag.</td><td>Which channel is actually working, so you stop guessing where to post.</td></tr>
+              <tr><td>What they clicked</td><td>Every button and link, named. Checkout clicks name <strong>the product</strong>.</td><td>The most useful list here — it shows demand before anyone spends a dollar.</td></tr>
+              <tr><td>On what device</td><td>Phone, tablet, desktop.</td><td>It will be mostly phone. Every design decision follows from that.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>The funnel — where you're losing people</summary>
+        <div class="body">
+          <p>Four bars, each counting <strong>people</strong>, not clicks. One fan pressing five buttons is one person who acted.</p>
+          <div class="scroll"><table>
+            <thead><tr><th>Step</th><th>Counts someone who…</th></tr></thead>
+            <tbody>
+              <tr><td>Visited</td><td>opened any page.</td></tr>
+              <tr><td>Read on</td><td>got halfway down a page, or stayed 15+ seconds actually looking at it.</td></tr>
+              <tr><td>Clicked something</td><td>pressed a button, streaming link, product or social link — anything but plain navigation.</td></tr>
+              <tr><td>Joined</td><td>completed the signup form.</td></tr>
+            </tbody>
+          </table></div>
+          <p><strong>Read the drop, not the totals.</strong></p>
+          <div class="scroll"><table>
+            <thead><tr><th>Where it collapses</th><th>What that means</th><th>Look at</th></tr></thead>
+            <tbody>
+              <tr><td>Visited → Read on</td><td>The top of the page isn't landing. Nothing below it matters yet.</td><td>The first screen: the promise, the image, how fast it loads.</td></tr>
+              <tr><td>Read on → Clicked</td><td>People read, but nothing asks them to do anything.</td><td>Whether "Become a Rari" stays reachable while scrolling.</td></tr>
+              <tr><td>Clicked → Joined</td><td>The form is the wall.</td><td>Whether the form is quietly failing — "started signing up" is recorded separately from "joined" exactly so you can tell those apart.</td></tr>
+              <tr><td>Checkout clicks, no orders</td><td>They wanted it. The price or the checkout page stopped them.</td><td>Square, not the shop page.</td></tr>
+            </tbody>
+          </table></div>
+          <div class="tip"><p>Find the biggest drop. Change <strong>one</strong> thing. Note the date. Two changes shipped together is two changes and no answer.</p></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Every button — nothing here deletes</summary>
+        <div class="body">
+          <div class="scroll"><table>
+            <thead><tr><th>Button</th><th>Does</th><th>Undo</th></tr></thead>
+            <tbody>
+              <tr><td>Hide</td><td>Removes a wall post from public view.</td><td>Press Show. The post was never deleted — hiding is a flag.</td></tr>
+              <tr><td>Download signups</td><td>Spreadsheet of every email and phone number, with the page they joined from and when.</td><td>Read-only. Opens in Excel or Google Sheets.</td></tr>
+              <tr><td>Download opt-outs</td><td>Spreadsheet of everyone who asked to stop getting email.</td><td>Read-only.</td></tr>
+              <tr><td>7 / 30 / 90 days</td><td>Changes the engagement window.</td><td>Just a view.</td></tr>
+              <tr><td>Refresh</td><td>Pulls the latest numbers.</td><td>—</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Three rules that matter</summary>
+        <div class="body">
+          <div class="rule"><b>Before every email send</b>
+            <p>Download the opt-outs and give them to whoever is sending. The website's unsubscribe list and the email tool's list <strong>do not talk to each other</strong> yet. Mailing someone who unsubscribed is a legal problem and a fast way to get the sending domain blocked.</p></div>
+          <div class="rule"><b>The sending domain is brand new</b>
+            <p>Send in small batches — a handful a day, press first — not all at once. A new domain that blasts a full list gets flagged as spam, and that reputation is slow to repair.</p></div>
+          <div class="rule"><b>Never fake a number</b>
+            <p>No invented member counts, no seeded wall posts, no borrowed stats. Every number on the public site is real, which is exactly why anyone should believe the ones that matter — the contest win and the World Cup stage.</p></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Tagging a link so you know what worked</summary>
+        <div class="body">
+          <div class="tip">
+            <p>Add <code>?utm_source=herald</code> to the end of any link you send out. Anyone arriving through it shows up under that name in <strong>Where they came from</strong>, and stays labelled for their whole visit — even after they click through to the shop.</p>
+            <p>Use a different tag per email, per post, per flyer. It is the only way to know which one actually worked.</p>
+          </div>
+          <p>Example: <code>https://soundsofv12.com/?utm_source=miami-herald</code></p>
+        </div>
+      </details>
+
+      <details>
+        <summary>What's counted, what isn't</summary>
+        <div class="body">
+          <p>If a fan ever asks, this is the honest answer — and it is already written out on the <a href="privacy.html">privacy page</a>.</p>
+          <div class="scroll"><table>
+            <tbody>
+              <tr><td>Counted</td><td>Pages opened, how far down people scroll, time actually spent looking, what gets clicked, phone vs desktop, and the site or campaign link they arrived from.</td></tr>
+              <tr><td>Not counted</td><td>No cookies. No IP addresses. No full web addresses. No names attached to browsing. A referrer is shortened to a bare name like "instagram.com" before it is stored.</td></tr>
+              <tr><td>Opt-out</td><td>Anyone with Do Not Track or Global Privacy Control switched on is counted <strong>nowhere</strong> — no page views, no clicks.</td></tr>
+              <tr><td>Deleted</td><td>All of it, automatically, after 180 days. A job runs nightly.</td></tr>
+              <tr><td>Third parties</td><td>None. No Google Analytics, no Meta pixel. The data sits in your own database and goes nowhere else.</td></tr>
+            </tbody>
+          </table></div>
+          <p>The practical effect: your numbers read slightly lower than a site running Google Analytics. They are also honest, and there is no cookie banner in front of your homepage.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>When something looks wrong</summary>
+        <div class="body">
+          <div class="scroll"><table>
+            <thead><tr><th>What you see</th><th>What it means</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>"unauthorized"</td><td>Wrong password.</td><td>Re-copy it — a trailing space is the usual culprit.</td></tr>
+              <tr><td>"admin not configured"</td><td>The server lost its password setting.</td><td>Needs a developer: re-run the secret command.</td></tr>
+              <tr><td>"No apiUrl set…"</td><td>The site lost its link to the backend.</td><td>Needs a developer: <code>assets/js/config.js</code>.</td></tr>
+              <tr><td>Everything reads zero</td><td>Usually just a quiet window.</td><td>Switch to 90 days. If the site is genuinely getting visits and it is still zero, the tracker is not loading.</td></tr>
+              <tr><td>Impossibly good numbers</td><td>Probably a crawler, not fans.</td><td>Check <strong>Where they came from</strong> before celebrating. Bots are not filtered out.</td></tr>
+              <tr><td>Wall post won't submit</td><td>Five posts an hour, per person.</td><td>Intentional. Wait it out.</td></tr>
+              <tr><td>Signups climbing, engagement flat</td><td>Someone is submitting the form directly.</td><td>Download the list and look at it before mailing anyone.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>What this deliberately doesn't do</summary>
+        <div class="body">
+          <p>Known, decided, not forgotten. Each is fixable when it is worth fixing.</p>
+          <ul>
+            <li><strong>No welcome email.</strong> The signup form says "check your inbox" and nothing arrives. Either wire one up or change the wording — right now it is a promise nobody keeps.</li>
+            <li><strong>Wall posts appear instantly.</strong> No approval queue. The first troll gets through and stays up until you hide them. Worth watching in the early weeks.</li>
+            <li><strong>Poll votes are per-browser.</strong> A private window can vote twice. Fixing it properly means forcing fans to make accounts, which would kill participation. Wrong trade.</li>
+            <li><strong>No bot filtering</strong> on engagement numbers.</li>
+            <li><strong>Opt-outs do not sync</strong> to the email tool. Hence rule one.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>The password</summary>
+        <div class="body">
+          <p>It lives only in this browser tab. Close the tab and it is forgotten — there is no log-out button to remember.</p>
+          <p>Nobody finds this page by accident: it is hidden from search engines and nothing on the site links to it. That is tidiness, not security. <strong>The password is the security.</strong> It is the key to your email list — password manager, never in a text message, never in a screenshot.</p>
+          <p>If it ever leaks it can be changed in about a minute with <code>npx wrangler secret put ADMIN_TOKEN</code>, which locks out the old one instantly. Nothing is lost.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Under the hood</summary>
+        <div class="body">
+          <p>For whoever is at the keyboard. Skip unless something is broken.</p>
+          <div class="scroll"><table>
+            <tbody>
+              <tr><td>Backend</td><td>A Cloudflare Worker. Source in <code>site/backend/</code> — about 250 lines, no dependencies.</td></tr>
+              <tr><td>Database</td><td>Cloudflare D1 (SQLite), named <code>soundsofv12</code>.</td></tr>
+              <tr><td>Site</td><td>GitHub Pages, same repo. Push to <code>main</code> and it is live in about a minute.</td></tr>
+              <tr><td>Credentials</td><td><code>~/.v12/credentials.env</code>, mode 600, outside the repo.</td></tr>
+            </tbody>
+          </table></div>
+          <p><strong>Free-tier ceilings.</strong> 100,000 requests a day and 100,000 database writes a day. Each tracked action costs about 4 writes, so roughly 2,500 visitors a day before it binds — around a thousand times current traffic. The first bill would be a good problem.</p>
+<pre><code><span class="c"># from site/backend, with CLOUDFLARE_API_TOKEN exported</span>
+
+<span class="c"># keep your own copy of everything</span>
+npx wrangler d1 export soundsofv12 --remote --output=backup.sql
+
+<span class="c"># live server logs</span>
+npx wrangler tail
+
+<span class="c"># ask the database anything</span>
+npx wrangler d1 execute soundsofv12 --remote \
+  --command "SELECT COUNT(*) FROM signups"
+
+<span class="c"># change the admin password</span>
+npx wrangler secret put ADMIN_TOKEN
+
+<span class="c"># roll the database back to a moment in time</span>
+npx wrangler d1 time-travel restore soundsofv12 --timestamp=&lt;unix-seconds&gt;</code></pre>
+          <p>Cloudflare keeps automatic point-in-time history (7 days on the free plan), so a bad delete is recoverable without having prepared for it. Still worth running the export occasionally and keeping the file somewhere that is not Cloudflare.</p>
+          <p><strong>Showing the real Rari count on the site:</strong> take the number from this page and set <code>rariCount</code> in <code>assets/js/config.js</code>. Left empty, the site hides the stat rather than inventing one.</p>
+        </div>
+      </details>
+
     </div>
   </div>
 </div>
