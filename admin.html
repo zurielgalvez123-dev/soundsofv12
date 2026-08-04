@@ -36,12 +36,33 @@
   .muted{color:var(--tx3);font-size:13px}
   h2{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--tx3);font-weight:800;margin:26px 0 10px}
   #app{display:none}
+
+  /* engagement */
+  .seg button.on{background:var(--chr);color:#08201e;border-color:var(--chr);font-weight:800}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+  .bars{margin:0;padding:0;list-style:none}
+  .bars li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+           padding:6px 0;font-size:13.5px;position:relative}
+  .bars li+li{border-top:1px solid rgba(255,255,255,.05)}
+  .bars .lbl{position:relative;z-index:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bars .num{position:relative;z-index:1;color:var(--tx2);font-variant-numeric:tabular-nums;font-size:12.5px}
+  .bars .fill{position:absolute;left:-8px;top:3px;bottom:3px;background:rgba(127,212,204,.14);
+              border-radius:5px;z-index:0}
+  .funnel{display:grid;gap:9px}
+  .fstep{display:grid;grid-template-columns:120px 1fr auto;gap:12px;align-items:center;font-size:13.5px}
+  .ftrack{height:9px;background:var(--sunk);border-radius:99px;overflow:hidden}
+  .ffill{height:100%;background:var(--chr);border-radius:99px}
+  .fstep .fnum{color:var(--tx2);font-size:12.5px;font-variant-numeric:tabular-nums;min-width:92px;text-align:right}
+  .spark{display:flex;align-items:flex-end;gap:2px;height:56px;margin-top:4px}
+  .spark i{flex:1;background:rgba(127,212,204,.32);border-radius:2px 2px 0 0;min-height:2px}
+  .spark i.today{background:var(--chr)}
+  .note{color:var(--tx3);font-size:12.5px;margin:10px 0 0;line-height:1.55}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>V12 Admin</h1>
-  <p class="sub">Moderate the wall, export the list. Nothing here is public.</p>
+  <p class="sub">See what the site is doing, moderate the wall, export the list. Nothing here is public.</p>
 
   <div class="card" id="login">
     <label for="tok">Admin token</label>
@@ -57,6 +78,16 @@
   <div id="app">
     <div class="card">
       <div class="stats" id="stats"></div>
+    </div>
+
+    <h2>Engagement</h2>
+    <div class="card">
+      <div class="row seg" id="range" style="margin-bottom:16px">
+        <button data-days="7">7 days</button>
+        <button data-days="30" class="on">30 days</button>
+        <button data-days="90">90 days</button>
+      </div>
+      <div id="eng"><span class="muted">loading…</span></div>
     </div>
 
     <h2>Fan wall</h2>
@@ -159,6 +190,120 @@
     });
   }
 
+  /* ---------- engagement ---------- */
+
+  var DAYS = 30;
+
+  // Event names are written for the database; these are written for a
+  // person reading the page at midnight.
+  var LABEL = {
+    pageview: 'Page views', scroll_50: 'Read half a page', scroll_90: 'Read to the end',
+    engaged: 'Stayed 15s+', cta_click: 'Button presses', nav_click: 'Moved between pages',
+    buy_click: 'Went to checkout', stream_click: 'Opened a streaming link',
+    social_click: 'Opened a social link', outbound: 'Left to another site',
+    contact_click: 'Email or phone tap', audio_play: 'Played RUMBA', video_play: 'Played a video',
+    signup_submit: 'Started signing up', signup_ok: 'Joined the Rari\'s',
+    wall_post: 'Posted on the wall', poll_vote: 'Voted in a poll', share_click: 'Shared the site'
+  };
+  function label(n) { return LABEL[n] || n.replace(/_/g, ' '); }
+
+  function bars(rows, key, val, empty) {
+    if (!rows || !rows.length) return '<span class="muted">' + empty + '</span>';
+    var max = Math.max.apply(null, rows.map(function (r) { return +r[val] || 0; })) || 1;
+    return '<ul class="bars">' + rows.map(function (r) {
+      var v = +r[val] || 0;
+      return '<li><span class="fill" style="width:' + Math.max(2, (v / max) * 100) + '%"></span>' +
+             '<span class="lbl">' + esc(r[key]) + '</span>' +
+             '<span class="num">' + v + '</span></li>';
+    }).join('') + '</ul>';
+  }
+
+  function renderEngagement(d) {
+    var f = d.funnel || {};
+    var visitors = +f.visitors || 0;
+    var views = 0;
+    (d.totals || []).forEach(function (t) { if (t.name === 'pageview') views = +t.n || 0; });
+
+    var pct = function (n) { return visitors ? Math.round((n / visitors) * 100) : 0; };
+    var steps = [
+      ['Visited',        visitors],
+      ['Read on',        +f.read_on || 0],
+      ['Clicked something', +f.acted || 0],
+      ['Joined',         +f.joined || 0]
+    ];
+
+    var maxDay = Math.max.apply(null, (d.daily || []).map(function (x) { return +x.views || 0; })) || 1;
+
+    var html =
+      '<div class="stats" style="margin-bottom:20px">' +
+        [['Visitors', visitors], ['Page views', views],
+         ['Views each', visitors ? (views / visitors).toFixed(1) : '—'],
+         ['Signups', d.signups || 0]].map(function (p) {
+          return '<div class="stat"><b>' + p[1] + '</b><span>' + p[0] + '</span></div>';
+        }).join('') +
+      '</div>' +
+
+      '<div class="funnel">' + steps.map(function (s) {
+        return '<div class="fstep"><span>' + s[0] + '</span>' +
+          '<span class="ftrack"><span class="ffill" style="width:' + pct(s[1]) + '%"></span></span>' +
+          '<span class="fnum">' + s[1] + ' · ' + pct(s[1]) + '%</span></div>';
+      }).join('') + '</div>' +
+
+      (d.daily && d.daily.length > 1
+        ? '<h2 style="margin-top:24px">Page views per day</h2><div class="spark">' +
+          d.daily.map(function (x, i) {
+            return '<i title="' + esc(x.day) + ': ' + (x.views || 0) + '"' +
+                   (i === d.daily.length - 1 ? ' class="today"' : '') +
+                   ' style="height:' + Math.max(3, ((+x.views || 0) / maxDay) * 100) + '%"></i>';
+          }).join('') + '</div>'
+        : '') +
+
+      '<div class="grid2" style="margin-top:24px">' +
+        '<div><h2 style="margin-top:0">Most read pages</h2>' +
+          bars(d.pages, 'page', 'views', 'Nothing yet.') + '</div>' +
+        '<div><h2 style="margin-top:0">Where they came from</h2>' +
+          bars(d.refs, 'ref', 'visitors', 'Nothing yet.') + '</div>' +
+      '</div>' +
+
+      '<div class="grid2" style="margin-top:22px">' +
+        '<div><h2 style="margin-top:0">What they clicked</h2>' +
+          bars((d.clicks || []).map(function (c) {
+            return { what: label(c.name) + ' — ' + (c.detail || '?'), n: c.n };
+          }), 'what', 'n', 'Nothing yet.') + '</div>' +
+        '<div><h2 style="margin-top:0">On what device</h2>' +
+          bars(d.devices, 'device', 'visitors', 'Nothing yet.') + '</div>' +
+      '</div>' +
+
+      '<h2 style="margin-top:24px">Everything counted</h2>' +
+      bars((d.totals || []).map(function (t) { return { what: label(t.name), n: t.n }; }),
+           'what', 'n', 'No activity in this window.') +
+
+      '<p class="note">Counted in people, not clicks — one fan pressing five buttons is one ' +
+      'person who acted. Visitors who switch on Do Not Track are counted nowhere. ' +
+      'Detail older than 180 days is deleted automatically.</p>';
+
+    $('eng').innerHTML = html;
+  }
+
+  function loadEngagement() {
+    return api('/admin/engagement?days=' + DAYS)
+      .then(renderEngagement)
+      .catch(function (e) {
+        $('eng').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+      });
+  }
+
+  Array.prototype.forEach.call($('range').querySelectorAll('button'), function (b) {
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call($('range').querySelectorAll('button'),
+        function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      DAYS = +b.dataset.days;
+      $('eng').innerHTML = '<span class="muted">loading…</span>';
+      loadEngagement();
+    });
+  });
+
   function unlock() {
     if (!API_BASE) {
       $('loginmsg').innerHTML = '<div class="err">No apiUrl set in assets/js/config.js — deploy the backend first.</div>';
@@ -171,6 +316,7 @@
       sessionStorage.setItem('v12_admin_token', TOKEN);
       $('login').style.display = 'none';
       $('app').style.display = 'block';
+      loadEngagement();
       return loadWall();
     }).catch(function (e) {
       $('loginmsg').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
@@ -180,7 +326,7 @@
   $('go').addEventListener('click', unlock);
   $('tok').addEventListener('keydown', function (e) { if (e.key === 'Enter') unlock(); });
 
-  $('refresh').addEventListener('click', function(){ loadStats(); loadWall(); });
+  $('refresh').addEventListener('click', function(){ loadStats(); loadWall(); loadEngagement(); });
   $('dlSignups').addEventListener('click', function () {
     api('/admin/signups').then(function (d) {
       download('v12-signups.csv', csv(d.signups || [], ['email','phone','source_page','created_at']));

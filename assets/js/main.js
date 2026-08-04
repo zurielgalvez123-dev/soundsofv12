@@ -89,8 +89,12 @@
       }
 
       if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+      // Both halves are worth counting: the gap between them is the
+      // form failing people, not people losing interest.
+      if (window.V12_TRACK) window.V12_TRACK('signup_submit', here);
 
       function ok() {
+        if (window.V12_TRACK) window.V12_TRACK('signup_ok', here);
         try {
           var list = JSON.parse(store('v12_raris') || '[]');
           list.push(payload); store('v12_raris', JSON.stringify(list));

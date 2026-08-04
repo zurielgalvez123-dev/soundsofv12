@@ -21,8 +21,28 @@
  *   GET  /votes?poll=x                           -> tallies + your vote
  *   POST /votes        {poll, choice, visitor_id}
  *   POST /optout       {email, source}
+ *   POST /events       {visitor_id, session_id, page, ref, device, events:[…]}
  *   GET  /health
+ *
+ * A daily cron prunes engagement events older than EVENT_RETENTION_DAYS.
  */
+
+// Analytics is only useful as a trend, and a trend does not need last
+// year's raw rows. Pruning keeps the database small and means we are not
+// quietly accumulating a permanent record of individual browsing.
+const EVENT_RETENTION_DAYS = 180;
+
+// Batched ingest: one HTTP request carries a visit's events. These caps
+// are what stops a bored visitor with a console from burning the daily
+// write quota that the real features depend on.
+const EVENTS_PER_BATCH = 25;
+const EVENTS_PER_VISITOR_PER_HOUR = 600;
+
+// Event names come from our own client, so they are a known vocabulary
+// rather than free text. Anything else is dropped silently — a rejected
+// analytics call must never surface as an error in front of a visitor.
+const EVENT_NAME_RE = /^[a-z][a-z0-9_]{1,31}$/;
+const DEVICES = ["mobile", "tablet", "desktop"];
 
 const ALLOWED_ORIGINS = [
   "https://soundsofv12.com",
@@ -215,6 +235,58 @@ export default {
         return json(request, env, { ok: true });
       }
 
+      // ---------- engagement events ----------
+      // Write-only like the signup list, and for the same reason: there
+      // is no public read route, so the site's traffic is not something
+      // a competitor can pull down by guessing a URL.
+      //
+      // This route answers 200 to almost everything. Analytics is the
+      // least important thing on the page and must never be the reason a
+      // visitor sees a failure, so bad input is dropped, not rejected.
+      if (path === "/events" && request.method === "POST") {
+        const b = await request.json().catch(() => ({}));
+        const list = Array.isArray(b.events) ? b.events.slice(0, EVENTS_PER_BATCH) : [];
+        if (!list.length) return json(request, env, { ok: true, stored: 0 });
+
+        const visitor = str(b.visitor_id, 64);
+        const session = str(b.session_id, 64);
+        const page = str(b.page, 60);
+        const ref = str(b.ref, 60);
+        const rawDevice = str(b.device, 10);
+        const device = DEVICES.includes(rawDevice) ? rawDevice : null;
+
+        if (visitor) {
+          const row = await env.DB.prepare(
+            `SELECT COUNT(*) AS n FROM events
+              WHERE visitor_id = ?1 AND created_at > datetime('now','-1 hour')`
+          ).bind(visitor).first();
+          // Over the cap we still answer 200: the client should stop
+          // talking, not retry, and there is nothing here worth telling
+          // an abuser about.
+          if (row && row.n >= EVENTS_PER_VISITOR_PER_HOUR) {
+            return json(request, env, { ok: true, stored: 0 });
+          }
+        }
+
+        const stmt = env.DB.prepare(
+          `INSERT INTO events (name, page, detail, visitor_id, session_id, ref, device)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+        );
+        const rows = [];
+        for (const e of list) {
+          const name = str(e && e.n, 32);
+          if (!name || !EVENT_NAME_RE.test(name)) continue;
+          rows.push(stmt.bind(
+            name,
+            str(e.p, 60) || page,
+            str(e.d, 80),
+            visitor, session, ref, device
+          ));
+        }
+        if (rows.length) await env.DB.batch(rows);
+        return json(request, env, { ok: true, stored: rows.length });
+      }
+
       // ---------- admin ----------
       // Everything below needs the ADMIN_TOKEN secret:
       //   npx wrangler secret put ADMIN_TOKEN
@@ -274,6 +346,82 @@ export default {
           return json(request, env, row || {});
         }
 
+        // The engagement report. One round trip, because the admin page
+        // shows all of it at once and seven sequential awaits over the
+        // Atlantic is the difference between instant and sluggish.
+        if (path === "/admin/engagement" && request.method === "GET") {
+          let days = parseInt(url.searchParams.get("days"), 10);
+          if (!Number.isInteger(days) || days < 1 || days > 365) days = 30;
+          const since = `-${days} days`;
+
+          const q = (sql) => env.DB.prepare(sql).bind(since);
+          const [totals, daily, pages, refs, devices, clicks, funnel, signups] =
+            await env.DB.batch([
+              q(`SELECT name, COUNT(*) AS n, COUNT(DISTINCT visitor_id) AS people
+                   FROM events WHERE created_at > datetime('now', ?1)
+                  GROUP BY name ORDER BY n DESC`),
+
+              q(`SELECT substr(created_at, 1, 10) AS day,
+                        SUM(name = 'pageview')     AS views,
+                        COUNT(DISTINCT visitor_id) AS visitors
+                   FROM events WHERE created_at > datetime('now', ?1)
+                  GROUP BY day ORDER BY day`),
+
+              q(`SELECT page, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS visitors
+                   FROM events
+                  WHERE name = 'pageview' AND page IS NOT NULL
+                    AND created_at > datetime('now', ?1)
+                  GROUP BY page ORDER BY views DESC LIMIT 20`),
+
+              q(`SELECT COALESCE(ref, 'direct') AS ref, COUNT(DISTINCT visitor_id) AS visitors
+                   FROM events
+                  WHERE name = 'pageview' AND created_at > datetime('now', ?1)
+                  GROUP BY 1 ORDER BY visitors DESC LIMIT 15`),
+
+              q(`SELECT COALESCE(device, 'unknown') AS device, COUNT(DISTINCT visitor_id) AS visitors
+                   FROM events
+                  WHERE name = 'pageview' AND created_at > datetime('now', ?1)
+                  GROUP BY 1 ORDER BY visitors DESC`),
+
+              // What people actually pressed — the most directly
+              // actionable number on the page.
+              q(`SELECT name, detail, COUNT(*) AS n
+                   FROM events
+                  WHERE detail IS NOT NULL AND created_at > datetime('now', ?1)
+                    AND name IN ('cta_click','buy_click','stream_click','outbound',
+                                 'social_click','share_click','nav_click','poll_vote')
+                  GROUP BY name, detail ORDER BY n DESC LIMIT 25`),
+
+              // Counted in PEOPLE, not events: one visitor clicking five
+              // things is one person who acted, and a funnel that counts
+              // events instead flatters itself.
+              q(`SELECT COUNT(DISTINCT visitor_id) AS visitors,
+                        COUNT(DISTINCT CASE WHEN name IN ('scroll_50','scroll_90','engaged')
+                                            THEN visitor_id END) AS read_on,
+                        COUNT(DISTINCT CASE WHEN name IN ('cta_click','buy_click','stream_click',
+                                                          'outbound','share_click','audio_play',
+                                                          'poll_vote','wall_post')
+                                            THEN visitor_id END) AS acted,
+                        COUNT(DISTINCT CASE WHEN name = 'signup_ok'
+                                            THEN visitor_id END) AS joined
+                   FROM events WHERE created_at > datetime('now', ?1)`),
+
+              q(`SELECT COUNT(*) AS n FROM signups WHERE created_at > datetime('now', ?1)`),
+            ]);
+
+          return json(request, env, {
+            days,
+            totals:  totals.results  || [],
+            daily:   daily.results   || [],
+            pages:   pages.results   || [],
+            refs:    refs.results    || [],
+            devices: devices.results || [],
+            clicks:  clicks.results  || [],
+            funnel:  (funnel.results && funnel.results[0]) || {},
+            signups: (signups.results && signups.results[0] && signups.results[0].n) || 0,
+          });
+        }
+
         return json(request, env, { error: "not found" }, 404);
       }
 
@@ -283,5 +431,21 @@ export default {
       console.error("worker error", err && err.stack ? err.stack : err);
       return json(request, env, { error: "server error" }, 500);
     }
+  },
+
+  // Daily, via the cron trigger in wrangler.toml. Old engagement rows
+  // are deleted rather than archived: nobody will ever ask what a
+  // visitor clicked half a year ago, and not holding the data is the
+  // cheapest way to not mishandle it.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      env.DB.prepare(
+        `DELETE FROM events WHERE created_at < datetime('now', ?1)`
+      )
+        .bind(`-${EVENT_RETENTION_DAYS} days`)
+        .run()
+        .then((r) => console.log("pruned events", JSON.stringify(r && r.meta)))
+        .catch((e) => console.error("prune failed", e))
+    );
   },
 };

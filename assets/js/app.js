@@ -111,7 +111,10 @@
 
       if (btn) { btn.disabled = true; btn.textContent = 'Posting…'; }
       API.post(name, city, text, ME)
-        .then(function () { wf.reset(); loadLive(); done('🏁 Posted! You\'re on the wall, Rari.'); })
+        .then(function () {
+          if (window.V12_TRACK) window.V12_TRACK('wall_post');
+          wf.reset(); loadLive(); done('🏁 Posted! You\'re on the wall, Rari.');
+        })
         .catch(function (e) {
           done(/slow down/i.test(e.message)
             ? 'Easy — give it a minute before posting again.'
@@ -187,7 +190,10 @@
         votes[k] = (votes[k] || 0) + 1;
         mine = k; paint();
 
-        API.vote(id, k, ME).then(loadLive).catch(function () {
+        API.vote(id, k, ME).then(function () {
+          if (window.V12_TRACK) window.V12_TRACK('poll_vote', id + ':' + k);
+          loadLive();
+        }).catch(function () {
           votes[k]--; if (prev) votes[prev]++;
           mine = prev; paint();
         });

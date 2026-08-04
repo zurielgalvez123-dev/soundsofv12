@@ -69,3 +69,37 @@ CREATE UNIQUE INDEX IF NOT EXISTS optouts_email_key ON optouts(lower(email));
 -- Crude but effective abuse brake for the wall: one row per post, so
 -- the Worker can count recent posts per visitor without a KV namespace.
 CREATE INDEX IF NOT EXISTS wall_visitor_recent_idx ON wall_posts(visitor_id, created_at);
+
+
+-- ============================================================
+-- Engagement events
+--
+-- What visitors actually DO: which pages they read, how far down they
+-- get, which buttons they press, which songs and shop links they click.
+-- Signups tell us who arrived; this tells us what nearly worked.
+--
+-- Deliberately not personal data. No IP address, no user agent string,
+-- no full URLs, no query strings — a referrer is stored as a bare host
+-- ("instagram.com") because the rest of a referrer URL is where the
+-- private parts of it live. `visitor_id` is the same random browser id
+-- the polls already use: it de-duplicates, it does not identify.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS events (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL,          -- 'pageview', 'buy_click', 'scroll_90', …
+  page       TEXT,                   -- '/shop.html'
+  detail     TEXT,                   -- what was clicked, a label not a URL
+  visitor_id TEXT,
+  session_id TEXT,                   -- one visit; resets when the tab closes
+  ref        TEXT,                   -- referring HOST only
+  device     TEXT,                   -- 'mobile' | 'tablet' | 'desktop'
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  CHECK (length(name) BETWEEN 1 AND 32)
+);
+
+-- The three shapes every report asks for: over time, by kind, and the
+-- per-visitor recent count that rate-limits the ingest route.
+CREATE INDEX IF NOT EXISTS events_time_idx    ON events(created_at);
+CREATE INDEX IF NOT EXISTS events_name_idx    ON events(name, created_at);
+CREATE INDEX IF NOT EXISTS events_visitor_idx ON events(visitor_id, created_at);

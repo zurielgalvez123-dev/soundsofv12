@@ -12,3 +12,8 @@ database_id = "a79eecd9-b79b-4ecb-a5db-2986dec84d32"
 # Set DEV = "1" only for local testing; it relaxes CORS to localhost.
 [vars]
 DEV = "0"
+
+# Nightly prune of engagement events older than 180 days (04:17 UTC —
+# off the hour, where every other cron on the platform piles up).
+[triggers]
+crons = ["17 4 * * *"]
