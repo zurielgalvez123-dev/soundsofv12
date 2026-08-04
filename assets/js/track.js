@@ -200,13 +200,20 @@
   };
   var STREAMING = /spotify|apple|youtube|soundcloud|amazon music|deezer|tidal/;
 
-  // The label for a buy button: the product it sits next to, not the
-  // word "Buy", which 14 buttons share.
+  // The label for a buy button: the product it sits next to. All 14 of
+  // them say "Buy Now", so the link's own text is worthless here — the
+  // name is in the card around it (.plabel on the shop grid, a heading
+  // or a bold line anywhere else).
+  function clean(s) { return (s || '').replace(/\s+/g, ' ').trim().slice(0, 60); }
+
   function productLabel(el) {
-    var card = el.closest('[class*="card"], article, li, .product, .item');
-    var head = card && card.querySelector('h1,h2,h3,h4,.name,.title');
-    var txt = (head && head.textContent) || el.textContent || '';
-    return txt.replace(/\s+/g, ' ').trim().slice(0, 60) || null;
+    var card = el.closest && el.closest('.prod, .product, .item, [class*="card"], article, li');
+    if (card) {
+      var head = card.querySelector('.plabel, h1, h2, h3, h4, .name, .title, .body > b, b');
+      var named = clean(head && head.textContent);
+      if (named) return named;
+    }
+    return clean(el.textContent) || null;
   }
 
   document.addEventListener('click', function (ev) {
