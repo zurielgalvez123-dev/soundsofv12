@@ -113,6 +113,10 @@
       API.post(name, city, text, ME)
         .then(function () {
           if (window.V12_TRACK) window.V12_TRACK('wall_post');
+          // The wall is the one place someone tells us what to call them,
+          // so it is what the Rari card puts on the front.
+          try { localStorage.setItem('v12_rari_name', name); } catch (e) {}
+          if (window.V12_PAINT_CARD) window.V12_PAINT_CARD();
           wf.reset(); loadLive(); done('🏁 Posted! You\'re on the wall, Rari.');
         })
         .catch(function (e) {
@@ -124,80 +128,114 @@
   }
 
   /* ---------------- POLLS ----------------
-     Percentages are meaningless on a handful of votes, so raw counts
-     show until there are enough for one to mean anything. */
+     Questions, options and deadlines come from the API, so V12 can add
+     or close a poll from the admin page without anyone editing HTML.
+
+     Results behave the way people expect from Instagram: you see nothing
+     until you have voted, then the whole board opens up with bars, counts
+     and your pick marked. Once a poll's deadline passes, results are
+     public whether you voted or not — there is nothing left to influence.
+
+     Percentages need a denominator worth having. Under PCT_FLOOR total
+     votes the raw count shows instead, because "100%" off one vote reads
+     as a lie even when the arithmetic is right. */
   var PCT_FLOOR = 20;
 
-  $all('[data-poll]').forEach(function (poll) {
-    var id = poll.getAttribute('data-poll');
-    var key = 'v12_poll_' + id;
-    var opts = $all('.opt', poll);
-    var votes = {}, mine = null;
-    opts.forEach(function (o) { votes[o.getAttribute('data-opt')] = 0; });
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 
-    function total() { var t = 0; for (var k in votes) t += votes[k]; return t; }
+  // 'YYYY-MM-DD HH:MM:SS' from SQLite is UTC with no marker — the same
+  // shape parseTs already fixes for the wall.
+  function closesIn(iso) {
+    var ms = parseTs(iso) - Date.now();
+    if (ms <= 0) return null;
+    var m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
+    if (d >= 1) return plural(d, 'day', 'days') + ' left';
+    if (h >= 1) return plural(h, 'hour', 'hours') + ' left';
+    return plural(Math.max(m, 1), 'minute', 'minutes') + ' left';
+  }
+
+  var board = $('[data-polls]');
+  if (board && API) {
+    var polls = [];
+
+    function renderPoll(p) {
+      // Reveal on vote, or once voting is over.
+      var show = !!p.mine || p.closed;
+      var left = p.closed ? null : closesIn(p.closes_at);
+
+      var head = '<b>' + esc(p.question) + '</b>' +
+        (p.subtitle ? '<p class="muted small">' + esc(p.subtitle) + '</p>' : '') +
+        '<div class="pollmeta">' +
+          (p.closed ? '<span class="pollclosed">Voting closed</span>'
+                    : (left ? '<span class="polltime">' + esc(left) + '</span>' : '')) +
+          (show ? '<span>' + plural(p.total, 'vote', 'votes') + '</span>' : '') +
+        '</div>';
+
+      var opts = p.options.map(function (o) {
+        var pct = p.total ? Math.round(o.votes / p.total * 100) : 0;
+        var mine = p.mine === o.key;
+        var right = !show ? ''
+          : (p.total < PCT_FLOOR ? plural(o.votes, 'vote', 'votes') : pct + '%');
+        return '<button class="opt' + (mine ? ' voted' : '') + (show ? ' revealed' : '') + '"' +
+          (p.closed ? ' disabled' : '') +
+          ' data-poll="' + esc(p.id) + '" data-opt="' + esc(o.key) + '">' +
+          '<span class="bar" style="width:' + (show ? pct : 0) + '%"></span>' +
+          '<span class="lbl"><span>' + (mine ? '<i class="tick">✓</i>' : '') + esc(o.label) +
+          '</span><span class="pct">' + esc(right) + '</span></span></button>';
+      }).join('');
+
+      return '<div class="poll" data-pollid="' + esc(p.id) + '">' + head + opts +
+        (show ? '' : '<p class="note">Vote to see the results.</p>') + '</div>';
+    }
 
     function paint() {
-      var t = total();
-      opts.forEach(function (o) {
-        var k = o.getAttribute('data-opt'), v = votes[k] || 0;
-        var pct = t ? Math.round(v / t * 100) : 0;
-        $('.bar', o).style.width = (mine ? pct : 0) + '%';
-        var pctEl = $('.pct', o);
-        if (pctEl) {
-          if (!mine) pctEl.textContent = '';
-          else if (t < PCT_FLOOR) pctEl.textContent = v + (v === 1 ? ' vote' : ' votes');
-          else pctEl.textContent = pct + '%';
-        }
-        o.classList.toggle('voted', mine === k);
+      if (!polls.length) {
+        board.innerHTML = '<div class="poll pollempty"><b>No polls running right now.</b>' +
+          '<p class="muted small">Next one drops with the next release.</p></div>';
+        return;
+      }
+      board.innerHTML = polls.map(renderPoll).join('');
+    }
+
+    function load() {
+      return API.polls(ME).then(function (d) {
+        polls = d.polls || [];
+        paint();
       });
     }
 
-    function loadLocal() {
-      var d = get(key, null);
-      if (d) { votes = d.votes || votes; mine = d.mine || null; }
+    board.addEventListener('click', function (ev) {
+      var b = ev.target.closest && ev.target.closest('.opt');
+      if (!b || b.disabled) return;
+      var id = b.getAttribute('data-poll'), key = b.getAttribute('data-opt');
+      var p = polls.filter(function (x) { return x.id === id; })[0];
+      if (!p || p.closed || p.mine === key) return;
+
+      // Paint the answer immediately, then reconcile. A vote that the
+      // server refused must not leave a tick sitting on the screen.
+      var before = JSON.parse(JSON.stringify(p));
+      var opt = function (k) { return p.options.filter(function (o) { return o.key === k; })[0]; };
+      if (p.mine && opt(p.mine)) opt(p.mine).votes--; else p.total++;
+      if (opt(key)) opt(key).votes++;
+      p.mine = key;
       paint();
-    }
 
-    function loadLive() {
-      API.votes(id, ME).then(function (d) {
-        opts.forEach(function (o) { votes[o.getAttribute('data-opt')] = 0; });
-        for (var k in (d.tally || {})) if (k in votes) votes[k] = d.tally[k];
-        mine = d.mine || null;
+      API.vote(id, key, ME).then(function () {
+        if (window.V12_TRACK) window.V12_TRACK('poll_vote', id + ':' + key);
+        return load();
+      }).catch(function (e) {
+        var i = polls.indexOf(p);
+        if (i >= 0) polls[i] = before;
         paint();
-      }).catch(loadLocal);
-    }
-
-    if (API) loadLive(); else loadLocal();
-
-    opts.forEach(function (o) {
-      o.addEventListener('click', function () {
-        var k = o.getAttribute('data-opt');
-        if (mine === k) return;
-
-        if (!API) {
-          if (mine) votes[mine]--;
-          votes[k] = (votes[k] || 0) + 1;
-          mine = k; set(key, { votes: votes, mine: mine }); paint();
-          return;
-        }
-
-        // Paint optimistically, then reconcile against the server; roll
-        // back if the write failed so the UI never claims a vote landed
-        // when it didn't.
-        var prev = mine;
-        if (prev) votes[prev]--;
-        votes[k] = (votes[k] || 0) + 1;
-        mine = k; paint();
-
-        API.vote(id, k, ME).then(function () {
-          if (window.V12_TRACK) window.V12_TRACK('poll_vote', id + ':' + k);
-          loadLive();
-        }).catch(function () {
-          votes[k]--; if (prev) votes[prev]++;
-          mine = prev; paint();
-        });
+        if (/closed/i.test(e.message || '')) load();
       });
     });
-  });
+
+    board.innerHTML = '<div class="poll pollempty"><b>Loading the polls…</b></div>';
+    load().catch(function () {
+      board.innerHTML = '<div class="poll pollempty"><b>Polls didn\'t load.</b>' +
+        '<p class="muted small">Refresh in a moment.</p></div>';
+    });
+  }
+
 })();

@@ -93,13 +93,31 @@
       // form failing people, not people losing interest.
       if (window.V12_TRACK) window.V12_TRACK('signup_submit', here);
 
-      function ok() {
+      function ok(res) {
         if (window.V12_TRACK) window.V12_TRACK('signup_ok', here);
         try {
           var list = JSON.parse(store('v12_raris') || '[]');
           list.push(payload); store('v12_raris', JSON.stringify(list));
         } catch (e2) {}
-        show("🏁 You're in, Rari. Check your inbox — first drop, live alerts &amp; unreleased heat incoming.");
+
+        // The member number is the real signup row id from the backend,
+        // so the card shows the number they actually hold.
+        if (res && res.member) {
+          store('v12_member_no', String(res.member));
+          store('v12_member_contact', val);
+          paintRariCard();
+        }
+
+        // Say what will actually happen. Email confirmation is live;
+        // texts are not switched on yet, and telling someone to watch
+        // their phone for a message that is never sent is the exact
+        // thing that makes the rest of the site feel fake.
+        var isEmail = val.indexOf('@') > -1;
+        show(isEmail
+          ? "🏁 You're in, Rari. Check your inbox — the welcome is on its way, " +
+            "and you'll get the drops before anyone."
+          : "🏁 You're in, Rari. Your number is saved. Texts aren't switched on yet, " +
+            "so add an email too if you want the drops in your inbox now.");
         form.reset();
       }
       function fail() {
@@ -118,6 +136,86 @@
     });
     form.querySelector('input') && form.querySelector('input').addEventListener('input', function () { this.style.borderColor = ''; });
   });
+
+  /* ---------- booking inquiries ----------
+     Separate from the Rari signup on purpose. This form has five fields
+     and every one of them matters; the signup handler only ever looked
+     at the first input, which is how a booking form ended up silently
+     throwing away the date, the city, the budget and the brief. */
+  $all('form[data-booking]').forEach(function (form) {
+    var okBox = form.querySelector('.ok-msg');
+    var btn = form.querySelector('button[type=submit]');
+    var btnTxt = btn && btn.textContent;
+
+    function show(msg) { if (okBox) { okBox.innerHTML = msg; okBox.classList.add('show'); } }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var f = function (n) { var el = form.querySelector('[name="' + n + '"]'); return el ? el.value.trim() : ''; };
+      var name = f('name'), contact = f('contact');
+      if (!name || !contact) return;
+
+      // Nowhere to send it is a reason to say so, not to fake a receipt.
+      if (!API) {
+        show('Send it to <a href="mailto:booking@soundsofv12.com">booking@soundsofv12.com</a> — ' +
+             'the form isn\'t connected yet and we don\'t want your inquiry to vanish.');
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+      if (window.V12_TRACK) window.V12_TRACK('booking_submit', f('kind') || 'inquiry');
+
+      API.booking({
+        name: name, contact: contact, kind: f('kind'),
+        when: f('when'), details: f('details'),
+        visitor_id: window.V12_VISITOR || null
+      }).then(function () {
+        if (window.V12_TRACK) window.V12_TRACK('booking_ok', f('kind') || 'inquiry');
+        show('🏁 Got it. Your inquiry is with management — expect a reply within 2 business days.');
+        form.reset();
+      }).catch(function (err) {
+        show(/slow down/i.test(err.message || '')
+          ? 'Give it a minute before sending another one.'
+          : 'That didn\'t send. Email <a href="mailto:booking@soundsofv12.com">booking@soundsofv12.com</a> ' +
+            'directly and it\'ll get read.');
+      }).then(function () {
+        if (btn) { btn.disabled = false; btn.textContent = btnTxt; }
+      });
+    });
+  });
+
+  /* ---------- the Rari card ----------
+     The card used to be a mock-up: "#0512" and "YOUR NAME" were printed
+     in the HTML for everyone. Now it shows the member number the backend
+     actually issued — the signup's own row id, so #1 really was first —
+     and stays blank-but-honest for anyone who has not joined.
+
+     The name is whatever they signed the wall with, because that is the
+     only place on the site they tell us what to call them. */
+  function paintRariCard() {
+    var noEl = $('[data-rari-no]'), nameEl = $('[data-rari-name]');
+    if (!noEl && !nameEl) return;
+    var no = store('v12_member_no');
+    var name = store('v12_rari_name');
+    var contact = store('v12_member_contact') || '';
+
+    if (noEl) {
+      noEl.textContent = no
+        ? 'RARI · #' + String(no).padStart(4, '0')
+        : 'RARI · #———';
+    }
+    if (nameEl) {
+      if (name) nameEl.textContent = name.toUpperCase();
+      else if (contact) {
+        nameEl.textContent = (contact.indexOf('@') > -1
+          ? contact.split('@')[0] : contact).toUpperCase();
+      } else nameEl.textContent = 'NOT A RARI YET';
+    }
+    var card = noEl && noEl.closest ? noEl.closest('.raricard') : null;
+    if (card) card.classList.toggle('claimed', !!no);
+  }
+  window.V12_PAINT_CARD = paintRariCard;
+  paintRariCard();
 
   /* ---------- Rari counter ----------
      Only renders a member count when a real one is supplied (set
@@ -237,7 +335,15 @@
   var armed = false;
   function armGesture() {
     if (armed) return; armed = true;
-    var go = function () {
+    // Autoplay is blocked until the visitor interacts, so we wait for a
+    // gesture — but NOT a gesture that meant something else. Someone
+    // tapping a product, a buy button or a link is trying to shop or
+    // navigate; answering that with a song makes the site feel like it
+    // ignored the tap. Only a click on neutral page furniture starts it.
+    var INTENT = 'a,button,input,select,textarea,label,summary,[role="button"],.prod,.rel,.vthumb,.opt';
+    var go = function (ev) {
+      if (ev.type === 'pointerdown' && ev.target && ev.target.closest &&
+          ev.target.closest(INTENT)) return;
       document.removeEventListener('pointerdown', go, true);
       document.removeEventListener('keydown', go, true);
       if (get('v12_audio') !== 'off') a.play().catch(function () {});

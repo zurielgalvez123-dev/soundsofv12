@@ -130,6 +130,46 @@
       <div id="eng"><span class="muted">loading…</span></div>
     </div>
 
+    <h2>Booking inquiries</h2>
+    <div class="card">
+      <p class="muted" style="margin:0 0 14px">
+        Every inquiry from <code>book.html</code>. Each one is also emailed to
+        <code>booking@soundsofv12.com</code> the moment it lands, with reply-to set to the sender,
+        so hitting reply answers them directly.
+      </p>
+      <div id="bookings"><span class="muted">loading&hellip;</span></div>
+    </div>
+
+    <h2>Polls</h2>
+    <div class="card">
+      <p class="muted" style="margin:0 0 14px">
+        Whatever is here is what the Rari page shows. A poll with a deadline closes itself &mdash;
+        the server refuses late votes, so the countdown is real. Fans see results only after they
+        vote, or once voting has closed.
+      </p>
+      <div id="polls"><span class="muted">loading&hellip;</span></div>
+      <div class="row" style="margin-top:16px">
+        <button id="newPoll">New poll</button>
+        <button id="refreshPolls">Refresh</button>
+      </div>
+      <div id="pollmsg"></div>
+    </div>
+
+    <h2>Welcome email</h2>
+    <div class="card">
+      <p class="muted" style="margin:0 0 14px">
+        Every email signup is sent one welcome. <strong>Accepted</strong> means Resend took the
+        message &mdash; not that it reached an inbox. Anything that failed, or predates the email
+        being switched on, is caught by the backfill button.
+      </p>
+      <div id="mail"><span class="muted">loading&hellip;</span></div>
+      <div class="row" style="margin-top:16px">
+        <button id="backfill">Send to everyone missed</button>
+        <button id="refreshMail">Refresh</button>
+      </div>
+      <div id="mailmsg"></div>
+    </div>
+
     <h2>Fan wall</h2>
     <div class="card" id="wall"><span class="muted">loading…</span></div>
 
@@ -563,16 +603,220 @@ npx wrangler d1 time-travel restore soundsofv12 --timestamp=&lt;unix-seconds&gt;
       $('login').style.display = 'none';
       $('app').style.display = 'block';
       loadEngagement();
+      loadBookings();
+      loadPolls();
+      loadMail();
       return loadWall();
     }).catch(function (e) {
       $('loginmsg').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
     });
   }
 
+
+  /* ---------- polls ---------- */
+  function pollRow(p) {
+    var votes = p.options.reduce(function (n, o) { return n + o.votes; }, 0);
+    var state = !p.active ? 'hidden' : p.closed ? 'closed' : 'live';
+    return '<div class="card" style="margin:0 0 12px" data-pollcard="' + esc(p.id) + '">' +
+      '<div class="row" style="justify-content:space-between;align-items:baseline">' +
+        '<b>' + esc(p.question) + '</b>' +
+        '<span class="muted">' + esc(state) + ' &middot; ' + votes + ' votes &middot; <code>' + esc(p.id) + '</code></span>' +
+      '</div>' +
+      '<div class="muted" style="margin:6px 0 10px">' +
+        (p.closes_at ? 'Closes ' + esc(p.closes_at) + ' UTC' : 'No deadline') + '</div>' +
+      '<div class="scroll"><table><tbody>' +
+        p.options.map(function (o) {
+          return '<tr><td>' + esc(o.label) + '</td><td><code>' + esc(o.key) + '</code></td><td>' +
+                 o.votes + '</td></tr>';
+        }).join('') +
+      '</tbody></table></div>' +
+      '<div class="row" style="margin-top:12px">' +
+        '<button data-editpoll="' + esc(p.id) + '">Edit</button>' +
+        '<button data-togglepoll="' + esc(p.id) + '">' + (p.active ? 'Hide' : 'Show') + '</button>' +
+        '<button data-delpoll="' + esc(p.id) + '">Delete</button>' +
+      '</div></div>';
+  }
+
+  var POLLS = [];
+
+  function pollForm(p) {
+    p = p || { id: '', question: '', subtitle: '', closes_at: '', active: true,
+               options: [{ key: '', label: '' }, { key: '', label: '' }] };
+    var isNew = !p.id;
+    // datetime-local wants 'YYYY-MM-DDTHH:MM'; the API stores UTC.
+    var dt = p.closes_at ? String(p.closes_at).replace(' ', 'T').slice(0, 16) : '';
+    return '<div class="card" style="margin:0 0 12px">' +
+      '<div class="row" style="gap:10px;flex-wrap:wrap">' +
+        '<label>Short id <input id="pf_id" value="' + esc(p.id) + '" ' +
+          (isNew ? '' : 'readonly ') + 'placeholder="next-drop" style="width:150px"></label>' +
+        '<label>Closes (UTC, optional) <input id="pf_closes" type="datetime-local" value="' + esc(dt) + '"></label>' +
+      '</div>' +
+      '<label style="display:block;margin-top:10px">Question <input id="pf_q" value="' + esc(p.question) + '" style="width:100%"></label>' +
+      '<label style="display:block;margin-top:10px">Sub-line <input id="pf_sub" value="' + esc(p.subtitle || '') + '" style="width:100%"></label>' +
+      '<div id="pf_opts" style="margin-top:12px">' +
+        p.options.map(optInput).join('') +
+      '</div>' +
+      '<div class="row" style="margin-top:10px">' +
+        '<button id="pf_add">Add option</button>' +
+        '<button id="pf_save">Save poll</button>' +
+        '<button id="pf_cancel">Cancel</button>' +
+      '</div></div>';
+  }
+  function optInput(o) {
+    return '<div class="row" style="gap:8px;margin-bottom:8px">' +
+      '<input class="pf_okey" value="' + esc(o.key || '') + '" placeholder="key (a-z0-9-)" style="width:170px">' +
+      '<input class="pf_olabel" value="' + esc(o.label || '') + '" placeholder="What fans read" style="flex:1;min-width:180px">' +
+      '</div>';
+  }
+
+  function loadPolls() {
+    return api('/admin/polls').then(function (d) {
+      POLLS = d.polls || [];
+      $('polls').innerHTML = POLLS.length
+        ? POLLS.map(pollRow).join('')
+        : '<span class="muted">No polls yet.</span>';
+    }).catch(function (e) {
+      $('polls').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+    });
+  }
+
+  function savePoll() {
+    var opts = [];
+    var keys = document.querySelectorAll('.pf_okey');
+    var labels = document.querySelectorAll('.pf_olabel');
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].value.trim() && labels[i].value.trim()) {
+        opts.push({ key: keys[i].value.trim().toLowerCase(), label: labels[i].value.trim() });
+      }
+    }
+    var body = {
+      id: $('pf_id').value.trim().toLowerCase(),
+      question: $('pf_q').value.trim(),
+      subtitle: $('pf_sub').value.trim(),
+      closes_at: $('pf_closes').value || null,
+      options: opts
+    };
+    api('/admin/polls', { method: 'POST', body: body }).then(function () {
+      $('pollmsg').innerHTML = '<div class="ok">Saved. It is live on the site now.</div>';
+      loadPolls();
+    }).catch(function (e) {
+      $('pollmsg').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+    });
+  }
+
+  function wireForm() {
+    $('pf_add').addEventListener('click', function () {
+      $('pf_opts').insertAdjacentHTML('beforeend', optInput({}));
+    });
+    $('pf_save').addEventListener('click', savePoll);
+    $('pf_cancel').addEventListener('click', loadPolls);
+  }
+
+  $('newPoll').addEventListener('click', function () {
+    $('polls').innerHTML = pollForm(null); wireForm();
+  });
+  $('refreshPolls').addEventListener('click', loadPolls);
+
+  $('polls').addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('button');
+    if (!b) return;
+    var id = b.getAttribute('data-editpoll') || b.getAttribute('data-togglepoll') || b.getAttribute('data-delpoll');
+    if (!id) return;
+    var p = POLLS.filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+
+    if (b.hasAttribute('data-editpoll')) { $('polls').innerHTML = pollForm(p); wireForm(); return; }
+
+    if (b.hasAttribute('data-togglepoll')) {
+      api('/admin/polls', { method: 'POST', body: {
+        id: p.id, question: p.question, subtitle: p.subtitle,
+        closes_at: p.closes_at, active: !p.active, options: p.options
+      } }).then(loadPolls).catch(function (e) {
+        $('pollmsg').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+      });
+      return;
+    }
+
+    if (b.hasAttribute('data-delpoll')) {
+      var n = p.options.reduce(function (t, o) { return t + o.votes; }, 0);
+      if (!confirm('Delete "' + p.question + '"? Its ' + n + ' votes go with it. This cannot be undone.')) return;
+      api('/admin/polls/delete', { method: 'POST', body: { id: p.id } })
+        .then(loadPolls)
+        .catch(function (e) { $('pollmsg').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+    }
+  });
+
+  /* ---------- welcome email ---------- */
+  function loadMail() {
+    return api('/admin/mail').then(function (d) {
+      var s = d.summary || {}, rows = d.sends || [];
+      var missed = Math.max((s.email_signups || 0) - (s.welcomed || 0), 0);
+      $('mail').innerHTML =
+        '<div class="stats">' +
+          '<div><b>' + (s.email_signups || 0) + '</b><span>email signups</span></div>' +
+          '<div><b>' + (s.welcomed || 0) + '</b><span>welcomes accepted</span></div>' +
+          '<div><b>' + missed + '</b><span>never mailed</span></div>' +
+          '<div><b>' + (s.failed || 0) + '</b><span>failures</span></div>' +
+        '</div>' +
+        (rows.length ? '<div class="scroll" style="margin-top:14px"><table><thead><tr>' +
+          '<th>When</th><th>To</th><th>Status</th><th>Detail</th></tr></thead><tbody>' +
+          rows.slice(0, 40).map(function (r) {
+            return '<tr><td>' + esc(r.created_at) + '</td><td>' + esc(r.to_addr) + '</td>' +
+              '<td>' + esc(r.status) + '</td><td>' + esc(r.error || r.provider_id || '') + '</td></tr>';
+          }).join('') + '</tbody></table></div>' : '<p class="muted" style="margin-top:12px">Nothing sent yet.</p>');
+    }).catch(function (e) {
+      $('mail').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+    });
+  }
+
+  $('refreshMail').addEventListener('click', loadMail);
+  $('backfill').addEventListener('click', function () {
+    if (!confirm('Send the welcome email to everyone who has never had one? Real email, to real people.')) return;
+    $('mailmsg').innerHTML = '<div class="muted">sending…</div>';
+    api('/admin/mail/backfill', { method: 'POST', body: { limit: 50 } }).then(function (d) {
+      $('mailmsg').innerHTML = '<div class="ok">Attempted ' + d.attempted +
+        ', accepted ' + d.accepted + '. Run again if more are waiting.</div>';
+      loadMail();
+    }).catch(function (e) { $('mailmsg').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+  });
+
+
+  /* ---------- booking inquiries ---------- */
+  function loadBookings() {
+    return api('/admin/bookings').then(function (d) {
+      var rows = d.bookings || [];
+      if (!rows.length) { $('bookings').innerHTML = '<span class="muted">No inquiries yet.</span>'; return; }
+      $('bookings').innerHTML = '<div class="scroll"><table><thead><tr>' +
+        '<th>When</th><th>Name</th><th>Contact</th><th>Type</th><th>Date &amp; city</th><th>Details</th><th></th>' +
+        '</tr></thead><tbody>' + rows.map(function (r) {
+          return '<tr' + (r.handled ? ' style="opacity:.45"' : '') + '>' +
+            '<td>' + esc(r.created_at) + '</td>' +
+            '<td>' + esc(r.name) + '</td>' +
+            '<td>' + (/@/.test(r.contact)
+                ? '<a href="mailto:' + esc(r.contact) + '">' + esc(r.contact) + '</a>'
+                : esc(r.contact)) + '</td>' +
+            '<td>' + esc(r.kind || '') + '</td>' +
+            '<td>' + esc(r.when_where || '') + '</td>' +
+            '<td>' + esc(r.details || '') + '</td>' +
+            '<td><button data-bk="' + r.id + '" data-h="' + (r.handled ? 0 : 1) + '">' +
+              (r.handled ? 'Reopen' : 'Done') + '</button></td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }).catch(function (e) {
+      $('bookings').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+    });
+  }
+  $('bookings').addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('[data-bk]');
+    if (!b) return;
+    api('/admin/bookings/handled', { method: 'POST', body: {
+      id: +b.getAttribute('data-bk'), handled: b.getAttribute('data-h') === '1'
+    } }).then(loadBookings).catch(function(){});
+  });
+
   $('go').addEventListener('click', unlock);
   $('tok').addEventListener('keydown', function (e) { if (e.key === 'Enter') unlock(); });
 
-  $('refresh').addEventListener('click', function(){ loadStats(); loadWall(); loadEngagement(); });
+  $('refresh').addEventListener('click', function(){ loadStats(); loadWall(); loadEngagement(); loadBookings(); loadPolls(); loadMail(); });
   $('dlSignups').addEventListener('click', function () {
     api('/admin/signups').then(function (d) {
       download('v12-signups.csv', csv(d.signups || [], ['email','phone','source_page','created_at']));

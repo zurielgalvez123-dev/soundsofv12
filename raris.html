@@ -53,8 +53,8 @@
   </div>
   <div class="raricard">
     <div class="top"><div><div class="muted small" style="letter-spacing:.2em">RARI NATION</div><div class="h-md" style="font-family:var(--disp)">V12</div></div><div class="chip"></div></div>
-    <div class="no">RARI · #0512</div>
-    <div class="foot"><div><div class="muted small">MEMBER</div><b>YOUR NAME</b></div><img src="assets/img/mark.svg" style="width:40px" alt=""></div>
+    <div class="no" data-rari-no>RARI · #———</div>
+    <div class="foot"><div><div class="muted small">MEMBER</div><b data-rari-name>NOT A RARI YET</b></div><img src="assets/img/mark.svg" style="width:40px" alt=""></div>
   </div>
 </div></div></section>
 
@@ -89,21 +89,7 @@
 <!-- POLLS -->
 <section class="section-sm"><div class="wrap">
   <h2 class="h-md mb-3">You Call It 🗳️</h2>
-  <div class="grid-2">
-    <div class="poll" data-poll="game">
-      <b>Next stream game?</b><p class="muted small mb-2">Rari's decide the vibe.</p>
-      <button class="opt" data-opt="2k"><span class="bar"></span><span class="lbl"><span>NBA 2K</span><span class="pct"></span></span></button>
-      <button class="opt" data-opt="fc"><span class="bar"></span><span class="lbl"><span>EA FC (soccer)</span><span class="pct"></span></span></button>
-      <button class="opt" data-opt="fort"><span class="bar"></span><span class="lbl"><span>Fortnite</span><span class="pct"></span></span></button>
-      <button class="opt" data-opt="gta"><span class="bar"></span><span class="lbl"><span>GTA</span><span class="pct"></span></span></button>
-    </div>
-    <div class="poll" data-poll="drop">
-      <b>What drops next?</b><p class="muted small mb-2">Push the release you want.</p>
-      <button class="opt" data-opt="rumba-vid"><span class="bar"></span><span class="lbl"><span>RUMBA music video</span><span class="pct"></span></span></button>
-      <button class="opt" data-opt="single"><span class="bar"></span><span class="lbl"><span>Brand-new single</span><span class="pct"></span></span></button>
-      <button class="opt" data-opt="remix"><span class="bar"></span><span class="lbl"><span>RUMBA remix ft. ___</span><span class="pct"></span></span></button>
-    </div>
-  </div>
+  <div class="grid-2" data-polls></div>
 </div></section>
 
 <!-- FAN WALL -->
@@ -121,7 +107,7 @@
       <button class="btn btn-primary btn-block" type="submit">Post to the wall 🏁</button>
       <div class="ok-msg" id="wallok" style="margin-top:14px">🏁 Posted! You're on the wall, Rari.</div>
     </form>
-    <p class="note mt-2">↳ Runs locally right now (instant demo). Wire to Supabase to make it shared &amp; moderated across all fans.</p>
+    <p class="note mt-2">Posts are public and read on stream. Keep it clean — anything else gets hidden.</p>
   </div>
   <div class="wall" id="wallfeed"></div>
 </div></section>

@@ -17,7 +17,27 @@ window.V12_CONFIG = {
 
   // Set once signups are flowing and you want the real number on the
   // Rari page. Left null, the stat hides itself rather than inventing one.
-  rariCount: null
+  rariCount: null,
+
+  /* ---- the store ----
+     Fourthwall owns products, stock and checkout. Paste the Storefront
+     API token from the Fourthwall dashboard:
+         Settings → For Developers → Headless → Storefront API token
+     It starts with `ptkn_`. It is a PUBLIC read/cart token — it can list
+     published products and build a cart, and nothing else. It belongs in
+     this file. Never paste an admin or API secret here.
+
+     `shop` is optional: the checkout domain is read from Fourthwall
+     automatically. Set it only to force a specific one (e.g. a custom
+     domain), and it doubles as the fallback link before the token is in.
+     `collection` is the Fourthwall collection slug to show; "all" is the
+     default one every shop starts with. */
+  fourthwall: {
+    token: '',
+    shop: '',
+    collection: 'all',
+    currency: 'USD'
+  }
 };
 
 /* Thin client over our API. Returns null when no backend is configured,
@@ -50,6 +70,9 @@ window.V12_API = (function () {
       return req('/signup', { method: 'POST', body: {
         contact: contact, source_page: page, visitor_id: visitor } });
     },
+    booking: function (inq) {
+      return req('/booking', { method: 'POST', body: inq });
+    },
     wall: function () { return req('/wall'); },
     post: function (name, city, text, visitor) {
       return req('/wall', { method: 'POST', body: {
@@ -58,6 +81,12 @@ window.V12_API = (function () {
     votes: function (poll, visitor) {
       return req('/votes?poll=' + encodeURIComponent(poll) +
                  (visitor ? '&visitor_id=' + encodeURIComponent(visitor) : ''));
+    },
+    // The whole board: questions, options, deadlines, tallies and your
+    // pick, in one request. Adding a poll in the admin makes it appear
+    // here with no change to the page.
+    polls: function (visitor) {
+      return req('/polls' + (visitor ? '?visitor_id=' + encodeURIComponent(visitor) : ''));
     },
     vote: function (poll, choice, visitor) {
       return req('/votes', { method: 'POST', body: {

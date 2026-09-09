@@ -55,20 +55,20 @@
   </div>
   <div class="formcard">
     <h3 class="h-md mb-2">Send an inquiry</h3>
-    <form data-join>
-      <div class="frow"><label>Your name</label><input class="inp" placeholder="Name" required></div>
-      <div class="frow"><label>Email or phone</label><input class="inp" placeholder="you@company.com" required></div>
-      <div class="frow"><label>Type</label>
-        <select class="inp">
+    <form data-booking>
+      <div class="frow"><label for="bk_name">Your name</label><input class="inp" id="bk_name" name="name" maxlength="80" placeholder="Name" required></div>
+      <div class="frow"><label for="bk_contact">Email or phone</label><input class="inp" id="bk_contact" name="contact" maxlength="200" placeholder="you@company.com" required></div>
+      <div class="frow"><label for="bk_kind">Type</label>
+        <select class="inp" id="bk_kind" name="kind">
           <option>Live performance / show</option><option>Brand / sponsorship</option>
           <option>Feature / collab</option><option>Sync licensing</option><option>Press / interview</option><option>Other</option>
         </select>
       </div>
-      <div class="frow"><label>Date &amp; city</label><input class="inp" placeholder="e.g. Aug 15 · Miami"></div>
-      <div class="frow"><label>Details</label><textarea class="inp" rows="3" placeholder="Tell us about the event, budget range, and what you need."></textarea></div>
+      <div class="frow"><label for="bk_when">Date &amp; city</label><input class="inp" id="bk_when" name="when" maxlength="120" placeholder="e.g. Aug 15 · Miami"></div>
+      <div class="frow"><label for="bk_details">Details</label><textarea class="inp" id="bk_details" name="details" rows="3" maxlength="2000" placeholder="Tell us about the event, budget range, and what you need."></textarea></div>
       <button class="btn btn-primary btn-block" type="submit">Send inquiry</button>
       <div class="ok-msg" style="margin-top:14px"></div>
-      <p class="note mt-2">↳ Wire this form to your inbox/CRM (Formspree, or your API). Demo confirms on submit.</p>
+      <p class="note mt-2">Goes straight to management at booking@soundsofv12.com. Expect a reply within 2 business days.</p>
     </form>
   </div>
 </div></div></section>

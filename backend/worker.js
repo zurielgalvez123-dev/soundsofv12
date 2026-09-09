@@ -15,14 +15,21 @@
  * wrangler from your own machine (see README).
  *
  * Routes:
- *   POST /signup       {email|phone, source_page, visitor_id}
+ *   POST /signup       {email|phone, source_page, visitor_id}  -> member no.
+ *   POST /booking      {name, contact, kind, when, details}
  *   GET  /wall                                   -> visible posts
  *   POST /wall         {name, city, text, visitor_id}
+ *   GET  /polls?visitor_id=x                     -> board + deadlines + your pick
  *   GET  /votes?poll=x                           -> tallies + your vote
- *   POST /votes        {poll, choice, visitor_id}
+ *   POST /votes        {poll, choice, visitor_id} -> refused once closed
  *   POST /optout       {email, source}
  *   POST /events       {visitor_id, session_id, page, ref, device, events:[…]}
  *   GET  /health
+ *
+ * Secrets (npx wrangler secret put NAME):
+ *   ADMIN_TOKEN  gates every /admin/* route
+ *   RESEND_KEY   sends the welcome email and the booking notification;
+ *                without it both are skipped and the rows still land
  *
  * A daily cron prunes engagement events older than EVENT_RETENTION_DAYS.
  */
@@ -95,8 +102,155 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 
+// ============================================================
+// Welcome mail
+//
+// A signup that lands in a table and nothing else is a promise the page
+// makes and the backend quietly breaks. This is the part that keeps it.
+//
+// Two things this deliberately does NOT do:
+//   - It does not block the signup. If Resend is down, the row is still
+//     written and the visitor still sees success, because they did in
+//     fact join; the mail is retried by hand from the admin page.
+//   - It does not claim delivery. A 200 from Resend means accepted. The
+//     mail_sends row says 'accepted' and stores the provider id so a
+//     bounce can be traced back to the person later.
+// ============================================================
+const MAIL_FROM = "V12 <team@soundsofv12.com>";
+const MAIL_REPLY_TO = "team@soundsofv12.com";
+
+function welcomeEmail(site) {
+  const text = [
+    "You're in.",
+    "",
+    "You're a Rari now — that means you hear it first. New drops, live",
+    "alerts, and merch before it goes public.",
+    "",
+    "Two things worth doing right now:",
+    "",
+    `  The catalog — every release, every platform:  ${site}/music.html`,
+    `  The shop — the V12 Collection:                ${site}/shop.html`,
+    "",
+    "See you in the next one.",
+    "— V12",
+    "",
+    "---",
+    `Don't want these? Unsubscribe: ${site}/unsubscribe.html`,
+  ].join("\n");
+
+  const html = `<!doctype html><html><body style="margin:0;background:#08080a;color:#f6f5f2;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+<div style="max-width:520px;margin:0 auto;padding:34px 22px">
+  <p style="font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#a7a6a1;margin:0 0 10px">Rari Nation</p>
+  <h1 style="font-size:30px;line-height:1.1;margin:0 0 16px;color:#fff">You're in.</h1>
+  <p style="color:#c9c8c3;line-height:1.6;margin:0 0 18px">You're a Rari now — that means you hear it first. New drops, live alerts, and merch before it goes public.</p>
+  <p style="margin:0 0 10px"><a href="${site}/music.html" style="display:inline-block;padding:13px 22px;border-radius:999px;background:#e9e3d6;color:#0a0a0b;font-weight:700;text-decoration:none">Play the catalog</a></p>
+  <p style="margin:0 0 26px"><a href="${site}/shop.html" style="color:#e9e3d6">Or go straight to the shop →</a></p>
+  <p style="color:#75746f;font-size:12px;line-height:1.6;border-top:1px solid #26262e;padding-top:16px;margin:0">
+    SoundsOfV12 · Miami, FL<br>
+    <a href="${site}/unsubscribe.html" style="color:#75746f">Unsubscribe</a>
+  </p>
+</div></body></html>`;
+
+  return { subject: "You're in, Rari 🏁", text, html };
+}
+
+// A booking inquiry goes to the booking inbox, with Reply-To set to the
+// person asking — so hitting reply in Gmail answers the promoter, not us.
+async function sendBookingMail(env, inq) {
+  if (!env.RESEND_KEY) return { skipped: "no RESEND_KEY" };
+  const to = env.BOOKING_TO || "booking@soundsofv12.com";
+  const isEmail = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(inq.contact);
+
+  const lines = [
+    `Name:     ${inq.name}`,
+    `Contact:  ${inq.contact}`,
+    `Type:     ${inq.kind || "—"}`,
+    `When/where: ${inq.when || "—"}`,
+    "",
+    inq.details || "(no details given)",
+  ].join("\n");
+
+  let providerId = null, status = "error", errText = null;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.RESEND_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: MAIL_FROM,
+        to: [to],
+        reply_to: isEmail ? inq.contact : MAIL_REPLY_TO,
+        subject: `Booking inquiry — ${inq.name}${inq.kind ? " · " + inq.kind : ""}`,
+        text: lines,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.id) { providerId = data.id; status = "accepted"; }
+    else { errText = (data.message || `HTTP ${res.status}`).slice(0, 200); }
+  } catch (e) {
+    errText = String(e && e.message ? e.message : e).slice(0, 200);
+  }
+
+  await env.DB.prepare(
+    `INSERT INTO mail_sends (to_addr, kind, provider_id, status, error)
+     VALUES (?1, 'booking', ?2, ?3, ?4)`
+  ).bind(to, providerId, status, errText).run().catch(() => {});
+
+  return { status, providerId, error: errText };
+}
+
+async function sendWelcome(env, email) {
+  if (!env.RESEND_KEY) return { skipped: "no RESEND_KEY" };
+
+  // Never mail someone who asked us not to, and never mail the same
+  // person a second welcome.
+  const blocked = await env.DB.prepare(
+    `SELECT 1 AS x FROM optouts WHERE lower(email) = lower(?1)
+      UNION ALL
+     SELECT 1 FROM mail_sends
+      WHERE lower(to_addr) = lower(?1) AND kind = 'welcome' AND status = 'accepted'`
+  ).bind(email).first();
+  if (blocked) return { skipped: "opted out or already welcomed" };
+
+  const site = env.SITE_URL || "https://soundsofv12.com";
+  const body = welcomeEmail(site);
+
+  let providerId = null, status = "error", errText = null;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.RESEND_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: MAIL_FROM,
+        to: [email],
+        reply_to: MAIL_REPLY_TO,
+        subject: body.subject,
+        text: body.text,
+        html: body.html,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.id) { providerId = data.id; status = "accepted"; }
+    else { errText = (data.message || `HTTP ${res.status}`).slice(0, 200); }
+  } catch (e) {
+    errText = String(e && e.message ? e.message : e).slice(0, 200);
+  }
+
+  await env.DB.prepare(
+    `INSERT INTO mail_sends (to_addr, kind, provider_id, status, error)
+     VALUES (?1, 'welcome', ?2, ?3, ?4)`
+  ).bind(email, providerId, status, errText).run().catch(() => {});
+
+  return { status, providerId, error: errText };
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
 
@@ -124,10 +278,11 @@ export default {
 
         // A repeat signup is success, not an error — the visitor did
         // nothing wrong and should not see a failure.
-        await env.DB.prepare(
+        const ins = await env.DB.prepare(
           `INSERT INTO signups (email, phone, source_page, visitor_id)
            VALUES (?1, ?2, ?3, ?4)
-           ON CONFLICT DO NOTHING`
+           ON CONFLICT DO NOTHING
+           RETURNING id`
         )
           .bind(
             isEmail ? contact : null,
@@ -135,7 +290,81 @@ export default {
             str(b.source_page, 60),
             str(b.visitor_id, 64)
           )
-          .run();
+          .first();
+
+        // The member number is the signup's own row id, so #001 really is
+        // the first person who joined. On a repeat signup the insert
+        // returns nothing, so look up the number they already have —
+        // someone's Rari number must not change between visits.
+        let member = ins && ins.id;
+        if (!member) {
+          const prev = await env.DB.prepare(
+            isEmail
+              ? `SELECT id FROM signups WHERE lower(email) = lower(?1)`
+              : `SELECT id FROM signups WHERE phone = ?1`
+          ).bind(contact).first();
+          member = prev && prev.id;
+        }
+
+        // Mail after the response is on its way: the visitor should not
+        // wait on Resend, and a mail failure must not fail the signup.
+        if (isEmail) {
+          ctx.waitUntil(
+            sendWelcome(env, contact).catch((e) => console.error("welcome mail", e))
+          );
+        }
+
+        return json(request, env, {
+          ok: true,
+          member: member || null,
+          // Texts are not switched on yet (US carrier A2P registration).
+          // Telling the client this is what stops the page promising one.
+          sms: false,
+        });
+      }
+
+      // ---------- booking ----------
+      // The booking form used to carry `data-join`, so the newsletter
+      // handler took it: it read the FIRST input (a person's name),
+      // failed to validate it as an email, and stopped. Nobody was ever
+      // told. Every show, brand and sync inquiry ever typed into that
+      // form was discarded in the browser.
+      //
+      // Now it is stored first and mailed second, in that order on
+      // purpose: if Resend is down the inquiry is still on the record
+      // and shows up in the admin, rather than existing only inside an
+      // email that failed to send.
+      if (path === "/booking" && request.method === "POST") {
+        const b = await request.json().catch(() => ({}));
+        const name = str(b.name, 80);
+        const contact = str(b.contact, 200);
+        const details = str(b.details, 2000);
+        if (!name || !contact) {
+          return json(request, env, { error: "name and contact required" }, 400);
+        }
+        const kind = str(b.kind, 60);
+        const when = str(b.when, 120);
+        const visitor = str(b.visitor_id, 64);
+
+        if (visitor) {
+          const row = await env.DB.prepare(
+            `SELECT COUNT(*) AS n FROM bookings
+              WHERE visitor_id = ?1 AND created_at > datetime('now','-1 hour')`
+          ).bind(visitor).first();
+          if (row && row.n >= 5) {
+            return json(request, env, { error: "slow down a moment" }, 429);
+          }
+        }
+
+        await env.DB.prepare(
+          `INSERT INTO bookings (name, contact, kind, when_where, details, visitor_id)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+        ).bind(name, contact, kind, when, details, visitor).run();
+
+        ctx.waitUntil(
+          sendBookingMail(env, { name, contact, kind, when, details })
+            .catch((e) => console.error("booking mail", e))
+        );
 
         return json(request, env, { ok: true });
       }
@@ -181,6 +410,58 @@ export default {
       }
 
       // ---------- polls ----------
+      // The whole poll board in one round trip: questions, options,
+      // deadlines, tallies and which one you picked. The page renders
+      // from this, so adding a poll in the admin makes it appear on the
+      // site without anyone touching HTML.
+      if (path === "/polls" && request.method === "GET") {
+        const visitor = str(url.searchParams.get("visitor_id"), 64);
+
+        const [polls, options, tallies, mine] = await env.DB.batch([
+          env.DB.prepare(
+            `SELECT id, question, subtitle, closes_at, active,
+                    (closes_at IS NOT NULL AND closes_at <= datetime('now')) AS expired
+               FROM polls WHERE active = 1 ORDER BY sort, created_at`
+          ),
+          env.DB.prepare(
+            `SELECT poll, key, label FROM poll_options ORDER BY poll, sort, id`
+          ),
+          env.DB.prepare(
+            `SELECT poll, choice, COUNT(*) AS votes FROM poll_votes GROUP BY poll, choice`
+          ),
+          env.DB.prepare(
+            `SELECT poll, choice FROM poll_votes WHERE visitor_id = ?1`
+          ).bind(visitor || ""),
+        ]);
+
+        const byPoll = {};
+        for (const o of options.results || []) {
+          (byPoll[o.poll] = byPoll[o.poll] || []).push({ key: o.key, label: o.label, votes: 0 });
+        }
+        const count = {};
+        for (const t of tallies.results || []) count[t.poll + " " + t.choice] = t.votes;
+        const picked = {};
+        for (const m of mine.results || []) picked[m.poll] = m.choice;
+
+        const out = (polls.results || []).map((p) => {
+          const opts = (byPoll[p.id] || []).map((o) => ({
+            ...o, votes: count[p.id + " " + o.key] || 0,
+          }));
+          return {
+            id: p.id,
+            question: p.question,
+            subtitle: p.subtitle,
+            closes_at: p.closes_at,
+            closed: !!p.expired,
+            options: opts,
+            total: opts.reduce((n, o) => n + o.votes, 0),
+            mine: picked[p.id] || null,
+          };
+        });
+
+        return json(request, env, { polls: out });
+      }
+
       if (path === "/votes" && request.method === "GET") {
         const poll = str(url.searchParams.get("poll"), 40);
         const visitor = str(url.searchParams.get("visitor_id"), 64);
@@ -211,6 +492,30 @@ export default {
         if (!poll || !choice || !visitor) {
           return json(request, env, { error: "poll, choice and visitor_id required" }, 400);
         }
+
+        // The deadline is enforced HERE, not in the countdown on the page.
+        // A closed poll that only the client knows is closed is open to
+        // anyone with a console. A poll that predates this table (no row)
+        // is left alone so nothing already running breaks.
+        const meta = await env.DB.prepare(
+          `SELECT active,
+                  (closes_at IS NOT NULL AND closes_at <= datetime('now')) AS expired,
+                  (SELECT COUNT(*) FROM poll_options o WHERE o.poll = p.id) AS n_opts,
+                  (SELECT COUNT(*) FROM poll_options o WHERE o.poll = p.id AND o.key = ?2) AS ok_opt
+             FROM polls p WHERE p.id = ?1`
+        ).bind(poll, choice).first();
+
+        if (meta) {
+          if (!meta.active || meta.expired) {
+            return json(request, env, { error: "this poll has closed" }, 409);
+          }
+          // Only options the poll actually offers. Without this the
+          // tally is whatever anyone cares to POST.
+          if (meta.n_opts > 0 && !meta.ok_opt) {
+            return json(request, env, { error: "unknown option" }, 400);
+          }
+        }
+
         // Upsert on (poll, visitor_id): changing your mind moves the
         // vote rather than adding a second one.
         await env.DB.prepare(
@@ -321,6 +626,174 @@ export default {
           return json(request, env, { ok: true });
         }
 
+        // ----- polls: create, edit, close, delete -----
+        // Every poll including the closed and hidden ones, so the admin
+        // can reopen one rather than rebuild it.
+        if (path === "/admin/polls" && request.method === "GET") {
+          const [polls, options, tallies] = await env.DB.batch([
+            env.DB.prepare(
+              `SELECT id, question, subtitle, closes_at, active, sort, created_at,
+                      (closes_at IS NOT NULL AND closes_at <= datetime('now')) AS expired
+                 FROM polls ORDER BY sort, created_at`
+            ),
+            env.DB.prepare(`SELECT poll, key, label, sort FROM poll_options ORDER BY poll, sort, id`),
+            env.DB.prepare(`SELECT poll, choice, COUNT(*) AS votes FROM poll_votes GROUP BY poll, choice`),
+          ]);
+          const byPoll = {}, count = {};
+          for (const o of options.results || []) (byPoll[o.poll] = byPoll[o.poll] || []).push(o);
+          for (const t of tallies.results || []) count[t.poll + " " + t.choice] = t.votes;
+          return json(request, env, {
+            polls: (polls.results || []).map((p) => ({
+              ...p,
+              closed: !!p.expired,
+              options: (byPoll[p.id] || []).map((o) => ({
+                key: o.key, label: o.label, votes: count[p.id + " " + o.key] || 0,
+              })),
+            })),
+          });
+        }
+
+        // Create or replace one poll and its options in a single write.
+        // Options are replaced wholesale, but votes are keyed on
+        // (poll, choice) and are NOT touched: rename a label and the
+        // votes it already has follow it, drop an option and its votes
+        // stop being counted without being destroyed.
+        if (path === "/admin/polls" && request.method === "POST") {
+          const b = await request.json().catch(() => ({}));
+          const id = str(b.id, 40);
+          const question = str(b.question, 160);
+          if (!id || !/^[a-z0-9][a-z0-9_-]{0,39}$/.test(id)) {
+            return json(request, env, { error: "id must be a slug: a-z, 0-9, - and _" }, 400);
+          }
+          if (!question) return json(request, env, { error: "question required" }, 400);
+
+          // Accept 'YYYY-MM-DDTHH:MM' from a datetime-local input or a
+          // full ISO string, and store UTC in SQLite's own shape so the
+          // comparison against datetime('now') is apples to apples.
+          let closes = null;
+          const rawCloses = str(b.closes_at, 40);
+          if (rawCloses) {
+            const d = new Date(/[Zz]|[+-]\d{2}:?\d{2}$/.test(rawCloses) ? rawCloses : rawCloses + "Z");
+            if (isNaN(d.getTime())) return json(request, env, { error: "closes_at is not a date" }, 400);
+            closes = d.toISOString().slice(0, 19).replace("T", " ");
+          }
+
+          const opts = Array.isArray(b.options) ? b.options.slice(0, 12) : [];
+          const clean = [];
+          opts.forEach((o, i) => {
+            const key = str(o && o.key, 40);
+            const label = str(o && o.label, 80);
+            if (!key || !label || !/^[a-z0-9][a-z0-9_-]{0,39}$/.test(key)) return;
+            if (clean.some((c) => c.key === key)) return;
+            clean.push({ key, label, sort: i });
+          });
+          if (clean.length < 2) {
+            return json(request, env, { error: "a poll needs at least 2 options" }, 400);
+          }
+
+          const writes = [
+            env.DB.prepare(
+              `INSERT INTO polls (id, question, subtitle, closes_at, active, sort)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+               ON CONFLICT (id) DO UPDATE SET
+                 question = excluded.question, subtitle = excluded.subtitle,
+                 closes_at = excluded.closes_at, active = excluded.active, sort = excluded.sort`
+            ).bind(id, question, str(b.subtitle, 160), closes,
+                   b.active === false ? 0 : 1, Number.isFinite(+b.sort) ? +b.sort : 0),
+            env.DB.prepare(`DELETE FROM poll_options WHERE poll = ?1`).bind(id),
+            ...clean.map((o) =>
+              env.DB.prepare(
+                `INSERT INTO poll_options (poll, key, label, sort) VALUES (?1, ?2, ?3, ?4)`
+              ).bind(id, o.key, o.label, o.sort)
+            ),
+          ];
+          await env.DB.batch(writes);
+          return json(request, env, { ok: true, id });
+        }
+
+        // Deleting a poll takes its votes with it — there is nothing left
+        // to show, and leaving orphan rows would quietly re-inflate the
+        // tally if the same id were ever reused.
+        if (path === "/admin/polls/delete" && request.method === "POST") {
+          const b = await request.json().catch(() => ({}));
+          const id = str(b.id, 40);
+          if (!id) return json(request, env, { error: "id required" }, 400);
+          await env.DB.batch([
+            env.DB.prepare(`DELETE FROM poll_options WHERE poll = ?1`).bind(id),
+            env.DB.prepare(`DELETE FROM poll_votes  WHERE poll = ?1`).bind(id),
+            env.DB.prepare(`DELETE FROM polls       WHERE id   = ?1`).bind(id),
+          ]);
+          return json(request, env, { ok: true });
+        }
+
+        // ----- mail -----
+        // What was actually handed to Resend, so "did they get the email"
+        // has an answer that is not a guess.
+        if (path === "/admin/mail" && request.method === "GET") {
+          const { results } = await env.DB.prepare(
+            `SELECT to_addr, kind, provider_id, status, error, created_at
+               FROM mail_sends ORDER BY created_at DESC LIMIT 200`
+          ).all();
+          const row = await env.DB.prepare(
+            `SELECT
+               (SELECT COUNT(*) FROM signups WHERE email IS NOT NULL)  AS email_signups,
+               (SELECT COUNT(*) FROM mail_sends
+                 WHERE kind='welcome' AND status='accepted')           AS welcomed,
+               (SELECT COUNT(*) FROM mail_sends WHERE status='error')  AS failed`
+          ).first();
+          return json(request, env, { sends: results || [], summary: row || {} });
+        }
+
+        // Send the welcome to everyone with an email who has never had
+        // one accepted. Covers both "Resend was down" and every signup
+        // taken before mail existed at all.
+        if (path === "/admin/mail/backfill" && request.method === "POST") {
+          if (!env.RESEND_KEY) return json(request, env, { error: "RESEND_KEY not set" }, 503);
+          const b = await request.json().catch(() => ({}));
+          const limit = Math.min(Math.max(parseInt(b.limit, 10) || 25, 1), 100);
+          const { results } = await env.DB.prepare(
+            `SELECT s.email FROM signups s
+              WHERE s.email IS NOT NULL
+                AND NOT EXISTS (SELECT 1 FROM mail_sends m
+                                 WHERE lower(m.to_addr) = lower(s.email)
+                                   AND m.kind = 'welcome' AND m.status = 'accepted')
+                AND NOT EXISTS (SELECT 1 FROM optouts o
+                                 WHERE lower(o.email) = lower(s.email))
+              ORDER BY s.created_at LIMIT ?1`
+          ).bind(limit).all();
+
+          const out = [];
+          for (const r of results || []) {
+            out.push({ email: r.email, ...(await sendWelcome(env, r.email)) });
+          }
+          return json(request, env, {
+            ok: true,
+            attempted: out.length,
+            accepted: out.filter((o) => o.status === "accepted").length,
+            results: out,
+          });
+        }
+
+        // ----- bookings -----
+        if (path === "/admin/bookings" && request.method === "GET") {
+          const { results } = await env.DB.prepare(
+            `SELECT id, name, contact, kind, when_where, details, handled, created_at
+               FROM bookings ORDER BY created_at DESC LIMIT 200`
+          ).all();
+          return json(request, env, { bookings: results || [] });
+        }
+
+        // Marking one handled is how the list stays a to-do rather than
+        // an archive nobody reads.
+        if (path === "/admin/bookings/handled" && request.method === "POST") {
+          const b = await request.json().catch(() => ({}));
+          const id = parseInt(b.id, 10);
+          if (!Number.isInteger(id)) return json(request, env, { error: "id required" }, 400);
+          await env.DB.prepare(`UPDATE bookings SET handled = ?1 WHERE id = ?2`)
+            .bind(b.handled ? 1 : 0, id).run();
+          return json(request, env, { ok: true });
+        }
+
         if (path === "/admin/signups" && request.method === "GET") {
           const { results } = await env.DB.prepare(
             `SELECT email, phone, source_page, created_at FROM signups ORDER BY created_at DESC`
@@ -341,7 +814,8 @@ export default {
                     (SELECT COUNT(*) FROM wall_posts WHERE hidden = 0)    AS wall_visible,
                     (SELECT COUNT(*) FROM wall_posts WHERE hidden = 1)    AS wall_hidden,
                     (SELECT COUNT(*) FROM poll_votes)                     AS votes,
-                    (SELECT COUNT(*) FROM optouts)                        AS optouts`
+                    (SELECT COUNT(*) FROM optouts)                        AS optouts,
+                    (SELECT COUNT(*) FROM bookings WHERE handled = 0)     AS bookings_open`
           ).first();
           return json(request, env, row || {});
         }
