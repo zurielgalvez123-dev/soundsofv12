@@ -7,13 +7,11 @@
    cart is built here, then the buyer is handed to Fourthwall's own
    hosted checkout. No card details ever touch this site.
 
-   The storefront token is PUBLIC by design (Fourthwall calls it a
-   storefront token for that reason) — it can read published products
-   and build carts, nothing else. It is safe in this file. An admin key
-   would not be, and none is used here.
-
-   Configure in assets/js/config.js:
-       window.V12_CONFIG.fourthwall = { token: 'ptkn_…' }
+   The storefront token is NOT in this repo. It is held as the
+   FW_STOREFRONT_TOKEN secret on our Worker and fetched from GET
+   /storefront on load. It is public either way — the shop cannot render
+   without it reaching the browser — and Fourthwall issues it for exactly
+   that. Keeping it on the Worker means it rotates without a site deploy.
 
    With no token the grid does not pretend: it says the store is opening
    and links to Fourthwall directly if a shop URL is known. A "Buy Now"
@@ -27,6 +25,7 @@
   var TOKEN = (CFG.token || '').trim();
   var CURRENCY = CFG.currency || 'USD';
   var COLLECTION = CFG.collection || 'all';
+  var SHOP = CFG.shop || '';
   var CART_KEY = 'v12_fw_cart';
 
   var grid = document.querySelector('[data-shop-grid]');
@@ -389,49 +388,91 @@
   }
 
   /* ---------------- boot ---------------- */
+  // The whole card opens the product, not just the photo and the button.
+  // Anyone who taps the name or the price means "show me this".
   grid.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-open], .prodhit');
-    if (!t) return;
-    var card = t.closest('[data-i]');
-    if (card) openProduct(parseInt(card.getAttribute('data-i'), 10));
+    var card = e.target.closest && e.target.closest('[data-i]');
+    if (!card) return;
+    var btn = e.target.closest('button');
+    if (btn && btn.disabled) return;
+    openProduct(parseInt(card.getAttribute('data-i'), 10));
   });
 
-  if (!TOKEN) {
-    note('<b>The store is being rebuilt.</b><p class="muted small mt-1">' +
-         'Every piece is moving to Fourthwall so sizes, stock and shipping are real.' +
-         (CFG.shop ? ' Until it lands here, shop it directly:' : '') + '</p>' +
-         (CFG.shop ? '<a class="btn btn-primary mt-2" href="' + esc(CFG.shop) +
-                     '" target="_blank" rel="noopener">Open the V12 store →</a>' : ''));
-    return;
-  }
+  function start() {
+    if (!TOKEN) {
+      note('<b>The store is being rebuilt.</b><p class="muted small mt-1">' +
+           'Every piece is moving to Fourthwall so sizes, stock and shipping are real.' +
+           (SHOP ? ' Until it lands here, shop it directly:' : '') + '</p>' +
+           (SHOP ? '<a class="btn btn-primary mt-2" href="' + esc(SHOP) +
+                   '" target="_blank" rel="noopener">Open the V12 store &rarr;</a>' : ''));
+      return;
+    }
 
-  note('<b>Loading the drop…</b>');
-  buildBag();
+    note('<b>Loading the drop…</b>');
+    buildBag();
 
-  Promise.all([
-    req('/collections/' + encodeURIComponent(COLLECTION) + '/products?currency=' + CURRENCY)
-      .catch(function (e) {
-        // A shop that never renamed its default collection has no "all".
+    Promise.all([
+      allProducts(COLLECTION).catch(function (e) {
+        // A shop that renamed its default collection has no "all".
         if (e.status !== 404) throw e;
         return req('/collections').then(function (d) {
           var first = (d.results || [])[0];
-          if (!first) return { results: [] };
-          return req('/collections/' + encodeURIComponent(first.slug) + '/products?currency=' + CURRENCY);
+          if (!first) return [];
+          return allProducts(first.slug);
         });
       }),
-    req('/shop').catch(function () { return null; })
-  ]).then(function (out) {
-    state.products = (out[0] && out[0].results) || [];
-    var shop = out[1];
-    state.checkoutBase = CFG.shop ? CFG.shop.replace(/\/+$/, '')
-      : shop ? (shop.publicDomain ? 'https://' + shop.publicDomain
-                                  : 'https://' + shop.domain + '.fourthwall.com')
-             : null;
-    renderGrid();
-    return ensureCart();
-  }).then(paintBag).catch(function (e) {
-    note('<b>The store didn’t load.</b><p class="muted small mt-1">Refresh in a moment' +
-         (CFG.shop ? ', or <a href="' + esc(CFG.shop) + '" target="_blank" rel="noopener">shop it on Fourthwall</a>' : '') +
-         '.</p>');
-  });
+      req('/shop').catch(function () { return null; })
+    ]).then(function (out) {
+      state.products = out[0] || [];
+      var shop = out[1];
+      state.checkoutBase = SHOP ? SHOP.replace(/\/+$/, '')
+        : shop ? (shop.publicDomain ? 'https://' + shop.publicDomain
+                                    : 'https://' + shop.domain + '.fourthwall.com')
+               : null;
+      renderGrid();
+      return ensureCart();
+    }).then(paintBag).catch(function () {
+      note('<b>The store didn\u2019t load.</b><p class="muted small mt-1">Refresh in a moment' +
+           (SHOP ? ', or <a href="' + esc(SHOP) + '" target="_blank" rel="noopener">shop it on Fourthwall</a>' : '') +
+           '.</p>');
+    });
+  }
+
+  // The collection endpoint pages at 10 by default and answers `size`, so
+  // a shop with 19 products silently rendered 10 and gave no sign the rest
+  // existed. Ask for a big page AND still follow hasNextPage, so this
+  // cannot quietly truncate again as the catalogue grows.
+  function allProducts(slug, page, acc) {
+    page = page || 0; acc = acc || [];
+    return req('/collections/' + encodeURIComponent(slug) + '/products' +
+               '?currency=' + CURRENCY + '&size=100&page=' + page)
+      .then(function (d) {
+        acc = acc.concat(d.results || []);
+        var pg = d.paging || {};
+        if (pg.hasNextPage && page < 20) return allProducts(slug, page + 1, acc);
+        return acc;
+      });
+  }
+
+  /* ---------------- boot ----------------
+     The token lives on our Worker, so it has to be fetched before anything
+     can be asked of Fourthwall. If that fetch fails the shop degrades to
+     the honest notice with a link out, rather than an empty grid — our own
+     API being down must not look like V12 having nothing to sell. */
+  if (TOKEN) { start(); return; }
+
+  var apiBase = (window.V12_CONFIG && window.V12_CONFIG.apiUrl || '').replace(/\/+$/, '');
+  if (!apiBase) { start(); return; }
+
+  note('<b>Loading the drop…</b>');
+  fetch(apiBase + '/storefront')
+    .then(function (r) { return r.ok ? r.json() : {}; })
+    .then(function (d) {
+      TOKEN = (d.token || '').trim();
+      if (d.shop) SHOP = d.shop;
+      if (d.collection) COLLECTION = d.collection;
+      if (d.currency) CURRENCY = d.currency;
+    })
+    .catch(function () {})
+    .then(start);
 })();

@@ -409,6 +409,38 @@ export default {
         });
       }
 
+      // ---------- storefront config ----------
+      // Hands the browser the Fourthwall storefront token.
+      //
+      // This is not a secret being leaked: Fourthwall issues a storefront
+      // token precisely so it can sit in client code, it can only read
+      // published products and build carts, and the shop cannot render
+      // without it reaching the page. Serving it from here rather than
+      // committing it buys two real things — it can be rotated with
+      // `wrangler secret put` instead of a site deploy, and it stays out
+      // of the repository, where GitHub's scanner misreads its shape as
+      // Shopify credentials and refuses the push.
+      //
+      // Cached at the edge: this answer changes about once a year, and the
+      // shop should not wait on a cold round trip to start rendering.
+      if (path === "/storefront" && request.method === "GET") {
+        return new Response(
+          JSON.stringify({
+            token: env.FW_STOREFRONT_TOKEN || "",
+            shop: env.FW_SHOP || "",
+            collection: env.FW_COLLECTION || "all",
+            currency: env.FW_CURRENCY || "USD",
+          }),
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "public, max-age=300",
+              ...corsHeaders(request, env),
+            },
+          }
+        );
+      }
+
       // ---------- booking ----------
       // The booking form used to carry `data-join`, so the newsletter
       // handler took it: it read the FIRST input (a person's name),

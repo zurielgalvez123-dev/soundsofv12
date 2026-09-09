@@ -20,21 +20,26 @@ window.V12_CONFIG = {
   rariCount: null,
 
   /* ---- the store ----
-     Fourthwall owns products, stock and checkout. Paste the Storefront
-     API token from the Fourthwall dashboard:
-         Settings → For Developers → Headless → Storefront API token
-     It starts with `ptkn_`. It is a PUBLIC read/cart token — it can list
-     published products and build a cart, and nothing else. It belongs in
-     this file. Never paste an admin or API secret here.
+     Fourthwall owns products, stock and checkout.
 
-     `shop` is optional: the checkout domain is read from Fourthwall
-     automatically. Set it only to force a specific one (e.g. a custom
-     domain), and it doubles as the fallback link before the token is in.
-     `collection` is the Fourthwall collection slug to show; "all" is the
-     default one every shop starts with. */
+     The storefront token is NOT in this file. It is held as the
+     FW_STOREFRONT_TOKEN secret on the Worker and served by GET /storefront,
+     which shop.js fetches on load.
+
+     It reaches the browser either way — it has to, for the shop to render —
+     and Fourthwall issues it as a public read/cart token that can list
+     published products and build a cart and nothing else. Keeping it on the
+     Worker buys two things regardless: it can be rotated without a site
+     deploy, and it is out of the repository, where GitHub's scanner reads
+     its shape as Shopify credentials and blocks the push.
+
+     `shop` is the link shown if the store cannot load, and forces the
+     checkout domain when set. `collection` is the Fourthwall collection
+     slug; "all" is the default one every shop starts with. Both are also
+     served by /storefront, so they can be left alone here. */
   fourthwall: {
     token: '',
-    shop: '',
+    shop: 'https://v12-shop.fourthwall.com',
     collection: 'all',
     currency: 'USD'
   }

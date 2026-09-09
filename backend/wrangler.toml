@@ -13,6 +13,12 @@ database_id = "a79eecd9-b79b-4ecb-a5db-2986dec84d32"
 [vars]
 DEV = "0"
 
+# Storefront shape. Not secret — the token itself is the FW_STOREFRONT_TOKEN
+# secret, served to the browser by GET /storefront.
+FW_SHOP = "https://v12-shop.fourthwall.com"
+FW_COLLECTION = "all"
+FW_CURRENCY = "USD"
+
 # Nightly prune of engagement events older than 180 days (04:17 UTC —
 # off the hour, where every other cron on the platform piles up).
 [triggers]

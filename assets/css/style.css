@@ -734,6 +734,12 @@ body.noscroll{overflow:hidden}
 
 .bagwrap{position:fixed;inset:0;z-index:130;background:rgba(4,4,6,.72);backdrop-filter:blur(6px);
   display:flex;justify-content:flex-end}
+
+/* The `hidden` attribute only sets `display:none` at user-agent priority,
+   so ANY display in a stylesheet beats it. Both of these overlays cover
+   the whole viewport, so while "hidden" they still swallowed every click
+   on the page underneath — the shop grid was completely unclickable. */
+.sheet[hidden],.bagwrap[hidden]{display:none!important}
 .bag{width:min(420px,100%);height:100%;background:var(--bg2);border-left:1px solid var(--line);
   display:flex;flex-direction:column}
 .baghead{display:flex;align-items:center;justify-content:space-between;padding:20px;
