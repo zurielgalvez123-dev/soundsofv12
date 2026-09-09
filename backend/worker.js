@@ -121,44 +121,119 @@ const MAIL_REPLY_TO = "team@soundsofv12.com";
 
 function welcomeEmail(site) {
   const text = [
-    "You're in.",
+    "YOU'RE IN.",
     "",
-    "You're a Rari now — that means you hear it first. New drops, live",
+    "You're a Rari now. That means you hear it first — new music, live",
     "alerts, and merch before it goes public.",
     "",
-    "Two things worth doing right now:",
-    "",
-    `  The catalog — every release, every platform:  ${site}/music.html`,
-    `  The shop — the V12 Collection:                ${site}/shop.html`,
+    "Start here:",
+    `  Every release, every platform   ${site}/music.html`,
+    `  The V12 Collection              ${site}/shop.html`,
+    `  Sign the wall                   ${site}/raris.html#wall`,
     "",
     "See you in the next one.",
-    "— V12",
+    "V12",
     "",
     "---",
-    `Don't want these? Unsubscribe: ${site}/unsubscribe.html`,
+    "SoundsOfV12 - Miami, FL",
+    `Unsubscribe: ${site}/unsubscribe.html`,
   ].join("\n");
 
-  const html = `<!doctype html><html><body style="margin:0;background:#08080a;color:#f6f5f2;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
-<div style="max-width:520px;margin:0 auto;padding:34px 22px">
-  <p style="font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#a7a6a1;margin:0 0 10px">Rari Nation</p>
-  <h1 style="font-size:30px;line-height:1.1;margin:0 0 16px;color:#fff">You're in.</h1>
-  <p style="color:#c9c8c3;line-height:1.6;margin:0 0 18px">You're a Rari now — that means you hear it first. New drops, live alerts, and merch before it goes public.</p>
-  <p style="margin:0 0 10px"><a href="${site}/music.html" style="display:inline-block;padding:13px 22px;border-radius:999px;background:#e9e3d6;color:#0a0a0b;font-weight:700;text-decoration:none">Play the catalog</a></p>
-  <p style="margin:0 0 26px"><a href="${site}/shop.html" style="color:#e9e3d6">Or go straight to the shop →</a></p>
-  <p style="color:#75746f;font-size:12px;line-height:1.6;border-top:1px solid #26262e;padding-top:16px;margin:0">
-    SoundsOfV12 · Miami, FL<br>
-    <a href="${site}/unsubscribe.html" style="color:#75746f">Unsubscribe</a>
-  </p>
-</div></body></html>`;
+  // Table layout with inline styles, because Gmail strips <style> blocks
+  // and Outlook renders on Word's engine — flexbox and CSS variables are
+  // not available here even though the rest of the site is built on them.
+  //
+  // Every colour is stated on the element. The logo sits on a band of the
+  // exact colour it was flattened onto, so a client that blocks images
+  // shows a dark band with alt text rather than a grey hole.
+  const html = `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>You're in, Rari</title>
+</head>
+<body style="margin:0;padding:0;background:#08080a;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">You're a Rari. New music, live alerts and merch before anyone else.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#08080a;">
+<tr><td align="center" style="padding:28px 14px;">
 
-  return { subject: "You're in, Rari 🏁", text, html };
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#0d0d10;border:1px solid #26262e;border-radius:18px;overflow:hidden;">
+
+  <tr><td align="center" style="background:#0a0a0c;padding:30px 24px 24px;">
+    <img src="${site}/assets/img/email-logo.png" width="220" alt="SoundsOfV12"
+         style="display:block;width:220px;max-width:70%;height:auto;border:0;outline:none;text-decoration:none;">
+  </td></tr>
+
+  <tr><td style="height:1px;background:#26262e;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+  <tr><td style="padding:34px 30px 8px;">
+    <p style="margin:0 0 12px;font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#a7a6a1;">Rari Nation</p>
+    <h1 style="margin:0 0 14px;font-family:Helvetica,Arial,sans-serif;font-size:40px;line-height:1.05;color:#ffffff;letter-spacing:-.02em;">You're in.</h1>
+    <p style="margin:0 0 22px;font-family:Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#c9c8c3;">
+      You're a Rari now. That means you hear it first &mdash; new music, live alerts, and merch before it goes public.
+    </p>
+  </td></tr>
+
+  <tr><td style="padding:0 30px 26px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr><td align="center" bgcolor="#e9e3d6" style="border-radius:999px;">
+        <a href="${site}/music.html"
+           style="display:inline-block;padding:15px 32px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#0a0a0b;text-decoration:none;border-radius:999px;">
+          Play the catalog
+        </a>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="padding:0 30px 30px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td style="padding:13px 0;border-top:1px solid #1e1e24;font-family:Helvetica,Arial,sans-serif;font-size:15px;">
+        <a href="${site}/shop.html" style="color:#e9e3d6;text-decoration:none;">The V12 Collection &rarr;</a>
+      </td></tr>
+      <tr><td style="padding:13px 0;border-top:1px solid #1e1e24;font-family:Helvetica,Arial,sans-serif;font-size:15px;">
+        <a href="${site}/raris.html#wall" style="color:#e9e3d6;text-decoration:none;">Sign the Rari wall &rarr;</a>
+      </td></tr>
+      <tr><td style="padding:13px 0;border-top:1px solid #1e1e24;font-family:Helvetica,Arial,sans-serif;font-size:15px;">
+        <a href="https://www.youtube.com/@soundsofv12" style="color:#e9e3d6;text-decoration:none;">Watch on YouTube &rarr;</a>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="padding:0 30px 32px;">
+    <p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#c9c8c3;">
+      See you in the next one.<br><strong style="color:#ffffff;">V12</strong>
+    </p>
+  </td></tr>
+
+  <tr><td style="padding:20px 30px 26px;border-top:1px solid #1e1e24;">
+    <p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.7;color:#75746f;">
+      SoundsOfV12 &middot; Miami, FL<br>
+      You got this because you joined the Rari's at soundsofv12.com.<br>
+      <a href="${site}/unsubscribe.html" style="color:#a7a6a1;">Unsubscribe</a>
+    </p>
+  </td></tr>
+
+</table>
+</td></tr></table>
+</body></html>`;
+
+  return { subject: "You're in, Rari", text, html };
 }
 
 // A booking inquiry goes to the booking inbox, with Reply-To set to the
 // person asking — so hitting reply in Gmail answers the promoter, not us.
 async function sendBookingMail(env, inq) {
   if (!env.RESEND_KEY) return { skipped: "no RESEND_KEY" };
-  const to = env.BOOKING_TO || "booking@soundsofv12.com";
+  // Deliver to a real mailbox, NOT to booking@soundsofv12.com.
+  //
+  // booking@ is an ImprovMX alias that forwards on to Gmail. Forwarding
+  // re-sends the message from ImprovMX's servers, so SPF is evaluated
+  // against a host soundsofv12.com never authorised and fails on that
+  // final hop — which is most of why the first booking notification landed
+  // in spam. Sending straight to the mailbox removes the hop entirely.
+  // Override with: npx wrangler secret put BOOKING_TO
+  const to = env.BOOKING_TO || "soundsofv12@gmail.com";
   const isEmail = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(inq.contact);
 
   const lines = [
@@ -184,6 +259,7 @@ async function sendBookingMail(env, inq) {
         reply_to: isEmail ? inq.contact : MAIL_REPLY_TO,
         subject: `Booking inquiry — ${inq.name}${inq.kind ? " · " + inq.kind : ""}`,
         text: lines,
+        headers: { "X-Entity-Ref-ID": String(Date.now()) },
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -232,6 +308,16 @@ async function sendWelcome(env, email) {
         subject: body.subject,
         text: body.text,
         html: body.html,
+        // Gmail and Yahoo have required one-click unsubscribe on bulk mail
+        // since February 2024. Without these two headers a sender with no
+        // reputation gets filtered on arrival no matter how clean the
+        // domain auth is — and soundsofv12.com has no sending history yet.
+        // List-Unsubscribe-Post is what makes it ONE-click rather than a
+        // link, which is the part the requirement is actually about.
+        headers: {
+          "List-Unsubscribe": `<${site}/unsubscribe.html>, <mailto:unsubscribe@soundsofv12.com?subject=unsubscribe>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
       }),
     });
     const data = await res.json().catch(() => ({}));
