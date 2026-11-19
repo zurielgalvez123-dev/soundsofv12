@@ -847,3 +847,5 @@ main p a,.section p a:not(.btn){text-decoration:underline;text-underline-offset:
   .featgrid{grid-template-columns:1fr}
   .join .grid-2{grid-template-columns:minmax(0,1fr)}
 }
+.post .postart{width:100%;height:auto;max-width:300px;aspect-ratio:1;object-fit:cover;border-radius:14px;display:block}
+.post .btn{padding:11px 18px;font-size:14px}

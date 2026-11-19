@@ -1,5 +1,19 @@
 [
  {
+  "slug": "por-el-amor-de-ella",
+  "name": "por el amor de ella",
+  "artist": "V12",
+  "kind": "EP",
+  "date": "2026-09-29",
+  "year": "2026",
+  "cover": "assets/img/covers/por-el-amor-de-ella.jpg",
+  "apple": "https://music.apple.com/us/album/por-el-amor-de-ella-ep/6813387762",
+  "spotify": null,
+  "deezer": "https://www.deezer.com/album/1081357602",
+  "tidal": null,
+  "soundcloud": null
+ },
+ {
   "slug": "descontrola",
   "name": "DESCONTROLA",
   "artist": "V12",
