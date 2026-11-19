@@ -278,89 +278,202 @@
 })();
 
 /* ================================================================
-   V3.1 — RUMBA background player (global, discreet, persistent)
-   Autoplay when allowed; else starts on first tap. Position survives
-   page navigation but resets when the tab closes; the mute preference
-   persists. Hides itself if no mp3.
+   V12 player — every release from Casa Del Perreo to now
+   (global, discreet, persistent)
+
+   Each visit starts on a different song: a fresh shuffle per tab
+   session, and never the song the last visit opened with. The song and
+   position survive clicking between pages but not closing the tab.
+   Shuffle and the on/off preference persist. Tracks live in
+   data/playlist.json; a track that fails to load is skipped.
+   Autoplay when allowed; else starts on first neutral tap.
    ================================================================ */
 (function () {
   'use strict';
   if (document.getElementById('v12audio')) return;
-  var SRC = 'assets/audio/rumba.mp3';
-  var a = new Audio();
-  a.loop = true; a.volume = 0.55; a.preload = 'auto'; a.src = SRC;
 
-  var pill = document.createElement('div');
-  pill.id = 'v12audio';
-  pill.setAttribute('role', 'button');
-  pill.setAttribute('aria-label', 'Play or pause RUMBA');
-  pill.innerHTML = '<span class="eq"><span></span><span></span><span></span></span>' +
-                   '<span class="t">RUMBA — V12</span><span class="btn-ic">▶</span>';
-  document.body.appendChild(pill);
-  var ic = pill.querySelector('.btn-ic');
-
-  // Playback POSITION lives in sessionStorage, so it survives clicking
-  // between pages but resets when the tab closes — a returning visitor
-  // hears RUMBA from the top rather than resuming mid-song weeks later.
-  // The on/off PREFERENCE stays in localStorage: someone who muted the
-  // site once should not have to mute it again on every visit.
-  function getPos() { try { return sessionStorage.getItem('v12_audio_t'); } catch (e) { return null; } }
-  function setPos(v) { try { sessionStorage.setItem('v12_audio_t', v); } catch (e) {} }
+  function sget(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+  function sset(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
-  // One-time cleanup: older builds stored the position in localStorage,
-  // which is why it persisted across sessions. Drop any stale value.
-  try { localStorage.removeItem('v12_audio_t'); } catch (e) {}
+  // Older builds kept RUMBA's position under these keys.
+  try { localStorage.removeItem('v12_audio_t'); sessionStorage.removeItem('v12_audio_t'); } catch (e) {}
 
-  function paint() {
-    var on = !a.paused;
-    pill.classList.toggle('playing', on);
-    ic.textContent = on ? '❚❚' : '▶';
-  }
-  a.addEventListener('play', paint);
-  a.addEventListener('pause', paint);
-  a.addEventListener('error', function () { pill.classList.add('gone'); });
+  fetch('data/playlist.json').then(function (r) { return r.json(); }).then(function (d) {
+    var tracks = (d && d.tracks) || [];
+    if (tracks.length) start(tracks);
+  }).catch(function () {});
 
-  // resume position across pages within this visit only
-  a.addEventListener('loadedmetadata', function () {
-    var t = parseFloat(getPos() || '0');
-    if (isFinite(t) && t > 0 && t < (a.duration || 1e9) - 2) { try { a.currentTime = t; } catch (e) {} }
-  });
-  function savePos() { if (a.currentTime > 0) setPos(String(a.currentTime)); }
-  setInterval(savePos, 3000);
-  window.addEventListener('pagehide', savePos);
-  document.addEventListener('visibilitychange', function () { if (document.hidden) savePos(); });
-
-  var armed = false;
-  function armGesture() {
-    if (armed) return; armed = true;
-    // Autoplay is blocked until the visitor interacts, so we wait for a
-    // gesture — but NOT a gesture that meant something else. Someone
-    // tapping a product, a buy button or a link is trying to shop or
-    // navigate; answering that with a song makes the site feel like it
-    // ignored the tap. Only a click on neutral page furniture starts it.
-    var INTENT = 'a,button,input,select,textarea,label,summary,[role="button"],.prod,.rel,.vthumb,.opt';
-    var go = function (ev) {
-      if (ev.type === 'pointerdown' && ev.target && ev.target.closest &&
-          ev.target.closest(INTENT)) return;
-      document.removeEventListener('pointerdown', go, true);
-      document.removeEventListener('keydown', go, true);
-      if (get('v12_audio') !== 'off') a.play().catch(function () {});
-    };
-    document.addEventListener('pointerdown', go, true);
-    document.addEventListener('keydown', go, true);
+  function shuffled(n, avoidFirst) {
+    var o = [];
+    for (var i = 0; i < n; i++) o.push(i);
+    for (var j = n - 1; j > 0; j--) { var k = Math.floor(Math.random() * (j + 1)); var t = o[j]; o[j] = o[k]; o[k] = t; }
+    if (n > 1 && o[0] === avoidFirst) { o.push(o.shift()); }
+    return o;
   }
 
-  pill.addEventListener('click', function (ev) {
-    ev.stopPropagation();
-    if (a.paused) { set('v12_audio', 'on'); a.play().catch(function () {}); }
-    else { set('v12_audio', 'off'); a.pause(); savePos(); }
-  });
+  function start(tracks) {
+    var N = tracks.length;
+    var shuffle = get('v12_shuffle') !== 'off';
 
-  // default: ON (unless user paused previously)
-  if (get('v12_audio') !== 'off') {
-    a.play().catch(armGesture);   // blocked -> first tap starts it
+    // Session state: play order, position in it, time in the song.
+    var order, pos;
+    try { order = JSON.parse(sget('v12_pl_order') || 'null'); } catch (e) { order = null; }
+    pos = parseInt(sget('v12_pl_pos') || '', 10);
+    if (!order || order.length !== N || !(pos >= 0 && pos < N)) {
+      var last = parseInt(get('v12_pl_last') || '', 10);
+      order = shuffle ? shuffled(N, last) : null;
+      if (!order) {
+        // In order (newest first), from a random song, not last visit's.
+        var s0 = Math.floor(Math.random() * N);
+        if (N > 1 && s0 === last) s0 = (s0 + 1) % N;
+        order = []; for (var i = 0; i < N; i++) order.push((s0 + i) % N);
+      }
+      pos = 0;
+      set('v12_pl_last', String(order[0]));
+      sset('v12_pl_t', '0');
+    }
+    function saveState() { sset('v12_pl_order', JSON.stringify(order)); sset('v12_pl_pos', String(pos)); }
+    saveState();
+
+    var a = new Audio();
+    a.volume = 0.55; a.preload = 'auto';
+
+    var pill = document.createElement('div');
+    pill.id = 'v12audio';
+    pill.innerHTML =
+      '<img class="cv" alt="" width="34" height="34">' +
+      '<span class="meta"><span class="t"></span><span class="ar"></span></span>' +
+      '<button type="button" class="pc pc-prev" aria-label="Previous song">&#9198;&#xFE0E;</button>' +
+      '<button type="button" class="pc pc-play" aria-label="Play">&#9654;&#xFE0E;</button>' +
+      '<button type="button" class="pc pc-next" aria-label="Next song">&#9197;&#xFE0E;</button>' +
+      '<button type="button" class="pc pc-shuf" aria-label="Shuffle" aria-pressed="false">&#8644;&#xFE0E;</button>' +
+      '<span class="bar"><i></i></span>';
+    document.body.appendChild(pill);
+    var $p = function (s) { return pill.querySelector(s); };
+    var playBtn = $p('.pc-play'), shufBtn = $p('.pc-shuf'), barFill = $p('.bar i');
+
+    function cur() { return tracks[order[pos]]; }
+
+    function paint() {
+      var on = !a.paused;
+      pill.classList.toggle('playing', on);
+      playBtn.innerHTML = on ? '&#10074;&#10074;' : '&#9654;&#xFE0E;';
+      playBtn.setAttribute('aria-label', on ? 'Pause' : 'Play');
+      shufBtn.classList.toggle('on', shuffle);
+      shufBtn.setAttribute('aria-pressed', shuffle ? 'true' : 'false');
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
+    }
+
+    var resumeAt = parseFloat(sget('v12_pl_t') || '0');
+    function load(autoplay) {
+      var t = cur();
+      a.src = t.src;
+      $p('.cv').src = t.cover;
+      $p('.t').textContent = t.title;
+      $p('.ar').textContent = t.artist;
+      pill.title = t.title + ' — ' + t.artist;
+      barFill.style.width = '0%';
+      saveState();
+      if ('mediaSession' in navigator && window.MediaMetadata) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: t.title, artist: t.artist, album: t.release,
+          artwork: [{ src: t.cover.replace('200x200bb', '600x600bb'), sizes: '600x600', type: 'image/jpeg' }]
+        });
+      }
+      if (autoplay) a.play().catch(function () {});
+    }
+
+    function go(step) {
+      resumeAt = 0; sset('v12_pl_t', '0');
+      pos = (pos + step + N) % N;
+      load(true);
+      set('v12_audio', 'on');
+    }
+    function prev() {
+      // Like every player: early in a song goes back a song, later restarts it.
+      if (a.currentTime > 4) { a.currentTime = 0; return; }
+      go(-1);
+    }
+    function toggleShuffle() {
+      shuffle = !shuffle;
+      set('v12_shuffle', shuffle ? 'on' : 'off');
+      var now = order[pos];
+      if (shuffle) {
+        var rest = shuffled(N).filter(function (i) { return i !== now; });
+        order = [now].concat(rest);
+      } else {
+        order = []; for (var i = 0; i < N; i++) order.push((now + i) % N);
+      }
+      pos = 0; saveState(); paint();
+    }
+
+    a.addEventListener('play', paint);
+    a.addEventListener('pause', paint);
+    a.addEventListener('ended', function () { go(1); });
+    var fails = 0;
+    a.addEventListener('error', function () {
+      if (++fails >= N) { pill.classList.add('gone'); return; }
+      go(1);
+    });
+    a.addEventListener('playing', function () { fails = 0; });
+    a.addEventListener('loadedmetadata', function () {
+      if (isFinite(resumeAt) && resumeAt > 0 && resumeAt < (a.duration || 1e9) - 2) {
+        try { a.currentTime = resumeAt; } catch (e) {}
+      }
+      resumeAt = 0;
+    });
+    a.addEventListener('timeupdate', function () {
+      if (a.duration) barFill.style.width = (100 * a.currentTime / a.duration).toFixed(2) + '%';
+    });
+    function savePos() { if (a.currentTime > 0) sset('v12_pl_t', String(a.currentTime)); }
+    setInterval(savePos, 3000);
+    window.addEventListener('pagehide', savePos);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) savePos(); });
+
+    playBtn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      if (a.paused) { set('v12_audio', 'on'); a.play().catch(function () {}); }
+      else { set('v12_audio', 'off'); a.pause(); savePos(); }
+    });
+    $p('.pc-next').addEventListener('click', function (ev) { ev.stopPropagation(); go(1); });
+    $p('.pc-prev').addEventListener('click', function (ev) { ev.stopPropagation(); prev(); });
+    shufBtn.addEventListener('click', function (ev) { ev.stopPropagation(); toggleShuffle(); });
+
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler('play', function () { set('v12_audio', 'on'); a.play(); });
+        navigator.mediaSession.setActionHandler('pause', function () { set('v12_audio', 'off'); a.pause(); });
+        navigator.mediaSession.setActionHandler('nexttrack', function () { go(1); });
+        navigator.mediaSession.setActionHandler('previoustrack', prev);
+      } catch (e) {}
+    }
+
+    var armed = false;
+    function armGesture() {
+      if (armed) return; armed = true;
+      // Autoplay is blocked until the visitor interacts, so we wait for a
+      // gesture — but NOT a gesture that meant something else. Someone
+      // tapping a product, a buy button or a link is trying to shop or
+      // navigate; answering that with a song makes the site feel like it
+      // ignored the tap. Only a click on neutral page furniture starts it.
+      var INTENT = 'a,button,input,select,textarea,label,summary,[role="button"],.prod,.rel,.vthumb,.opt,#v12audio';
+      var fire = function (ev) {
+        if (ev.type === 'pointerdown' && ev.target && ev.target.closest &&
+            ev.target.closest(INTENT)) return;
+        document.removeEventListener('pointerdown', fire, true);
+        document.removeEventListener('keydown', fire, true);
+        if (get('v12_audio') !== 'off' && a.paused) a.play().catch(function () {});
+      };
+      document.addEventListener('pointerdown', fire, true);
+      document.addEventListener('keydown', fire, true);
+    }
+
+    load(false);
+    // default: ON (unless the visitor paused it before)
+    if (get('v12_audio') !== 'off') a.play().catch(armGesture);
+    paint();
   }
-  paint();
 })();

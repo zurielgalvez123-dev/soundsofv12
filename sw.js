@@ -2,7 +2,7 @@
 // Bump CACHE to purge every visitor's stored copy. v1 was cache-first for
 // everything and never bumped, so returning visitors kept the launch-day
 // pages after every deploy.
-var CACHE = 'v12-v2';
+var CACHE = 'v12-v3';
 var CORE = [
   './', 'index.html', 'music.html', 'live.html', 'videos.html',
   'raris.html', 'shop.html', 'blog.html', 'about.html', 'book.html',
@@ -21,10 +21,13 @@ self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
   var url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
+  // Songs stream straight from the network: caching 80 MB of mp3s per
+  // visitor is wasteful, and a cached whole-file answer breaks seeking.
+  if (/\.mp3$/.test(url.pathname)) return;
   // Pages, CSS and JS go network-first so a deploy reaches everyone on the
   // next load; the cache is only the offline fallback. Images stay
   // cache-first for fast repeat loads.
-  var fresh = e.request.mode === 'navigate' || /\.(html|css|js|webmanifest)$/.test(url.pathname) || url.pathname.slice(-1) === '/';
+  var fresh = e.request.mode === 'navigate' || /\.(html|css|js|json|webmanifest)$/.test(url.pathname) || url.pathname.slice(-1) === '/';
   if (fresh) {
     e.respondWith(
       fetch(e.request).then(function (res) {

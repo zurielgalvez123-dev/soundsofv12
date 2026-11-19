@@ -563,33 +563,32 @@ body::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opac
 .boardpanel{background:#070708;border:1px solid #1c1c22;border-radius:var(--r-lg);padding:40px 30px;text-align:center;position:relative;overflow:hidden}
 .boardpanel .manifesto{font-size:13px;letter-spacing:.24em;line-height:2.2;text-transform:uppercase;color:#b9bec9;font-weight:600}
 
-/* ---- RUMBA mini player ---- */
+/* ---- V12 mini player ---- */
 #v12audio{position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:95;
-  display:flex;align-items:center;gap:10px;padding:9px 15px;border-radius:999px;cursor:pointer;
-  background:rgba(8,8,10,.85);backdrop-filter:blur(14px);border:1px solid #26262e;
-  box-shadow:0 10px 34px rgba(0,0,0,.55);transition:.2s;user-select:none;-webkit-user-select:none}
-#v12audio:hover{border-color:#3d4250;transform:translateY(-1px)}
-#v12audio .t{font-family:'Bebas Neue';letter-spacing:.14em;font-size:14px;color:var(--bone);white-space:nowrap}
-#v12audio .btn-ic{font-size:13px;color:#fff;width:22px;height:22px;display:grid;place-items:center;
-  background:rgba(233,227,214,.14);border-radius:50%}
-.eq{display:flex;align-items:flex-end;gap:2.5px;height:14px}
-.eq span{width:2.5px;height:100%;background:var(--bone);border-radius:2px;transform:scaleY(.25);transform-origin:bottom;opacity:.9}
-#v12audio.playing .eq span{animation:eqb 1s ease-in-out infinite}
-#v12audio.playing .eq span:nth-child(2){animation-delay:.18s}
-#v12audio.playing .eq span:nth-child(3){animation-delay:.36s}
-@keyframes eqb{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
+  display:flex;align-items:center;gap:4px;padding:6px 8px 6px 6px;border-radius:999px;overflow:hidden;
+  background:rgba(8,8,10,.88);backdrop-filter:blur(14px);border:1px solid #26262e;
+  box-shadow:0 10px 34px rgba(0,0,0,.55);user-select:none;-webkit-user-select:none;max-width:calc(100vw - 28px)}
+#v12audio .cv{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none;background:#16161b}
+#v12audio.playing .cv{animation:v12spin 9s linear infinite}
+@keyframes v12spin{to{transform:rotate(360deg)}}
+#v12audio .meta{display:flex;flex-direction:column;min-width:0;width:150px;margin:0 6px 0 6px;line-height:1.15}
+#v12audio .t{font-family:'Bebas Neue';letter-spacing:.1em;font-size:15px;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#v12audio .ar{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#v12audio .pc{flex:none;width:32px;height:32px;border-radius:50%;border:0;background:transparent;color:#fff;
+  font-size:13px;line-height:1;display:grid;place-items:center;cursor:pointer;transition:background .15s,color .15s}
+#v12audio .pc:hover,#v12audio .pc:focus-visible{background:rgba(233,227,214,.12)}
+#v12audio .pc-play{width:36px;height:36px;background:var(--bone);color:#0a0a0b;font-size:12px}
+#v12audio .pc-play:hover{background:#fff}
+#v12audio .pc-shuf{color:var(--mut2);font-size:15px}
+#v12audio .pc-shuf.on{color:var(--bone)}
+#v12audio .bar{position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(255,255,255,.06)}
+#v12audio .bar i{display:block;height:100%;width:0;background:var(--bone);opacity:.7}
 #v12audio.gone{display:none}
-/* On phones the pill sits above the bottom bar, and collapses to a
-   round icon. A persistent fixed control will always overlap whatever
-   content is behind it; at full width it was covering the hero's
-   "Become a Rari" button — the primary email CTA — so it shrinks to
-   roughly a thumb's width and leaves the button tappable. */
+/* Phones: above the bottom bar, title and back-skip dropped so the pill
+   stays about thumb-row size and does not cover the page's CTAs. */
 @media(max-width:640px){
-  #v12audio{bottom:calc(var(--bottom-h) + 12px + env(safe-area-inset-bottom,0px));
-    padding:0;width:46px;height:46px;justify-content:center;gap:0}
-  #v12audio .t{display:none}
-  #v12audio .eq{display:none}
-  #v12audio .btn-ic{width:auto;height:auto;font-size:15px}
+  #v12audio{bottom:calc(var(--bottom-h) + 12px + env(safe-area-inset-bottom,0px));gap:2px}
+  #v12audio .meta,#v12audio .pc-prev{display:none}
 }
 @media print{#v12audio{display:none}}
 

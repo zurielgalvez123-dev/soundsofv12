@@ -1,0 +1,311 @@
+{
+ "_note": "Mini-player playlist: every V12 release from Casa Del Perreo (2022-05-21) to now, newest first. Audio = his official YouTube release uploads (YouTube Music 'Releases'), matched by title + Apple track length, 128k mp3. Swap in masters at the same paths when available.",
+ "tracks": [
+  {
+   "title": "mi preview",
+   "artist": "V12",
+   "release": "por el amor de ella - EP",
+   "date": "2026-09-29",
+   "src": "assets/audio/mi-preview.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f4/17/70/f4177044-c124-5e1a-bc73-d0e9f30732a5/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/mi-preview/6813387762?i=6813387763"
+  },
+  {
+   "title": "Esta Noche",
+   "artist": "V12",
+   "release": "por el amor de ella - EP",
+   "date": "2026-09-29",
+   "src": "assets/audio/esta-noche.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f4/17/70/f4177044-c124-5e1a-bc73-d0e9f30732a5/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/esta-noche/6813387762?i=6813387770"
+  },
+  {
+   "title": "Tranquila",
+   "artist": "V12",
+   "release": "por el amor de ella - EP",
+   "date": "2026-09-29",
+   "src": "assets/audio/tranquila.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f4/17/70/f4177044-c124-5e1a-bc73-d0e9f30732a5/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/tranquila/6813387762?i=6813387769"
+  },
+  {
+   "title": "COMPLETA",
+   "artist": "V12",
+   "release": "por el amor de ella - EP",
+   "date": "2026-09-29",
+   "src": "assets/audio/completa.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f4/17/70/f4177044-c124-5e1a-bc73-d0e9f30732a5/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/completa/6813387762?i=6813387766"
+  },
+  {
+   "title": "Busca Calle",
+   "artist": "V12",
+   "release": "por el amor de ella - EP",
+   "date": "2026-09-29",
+   "src": "assets/audio/busca-calle.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f4/17/70/f4177044-c124-5e1a-bc73-d0e9f30732a5/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/busca-calle/6813387762?i=6813387767"
+  },
+  {
+   "title": "siguiéndote",
+   "artist": "V12",
+   "release": "por el amor de ella - EP",
+   "date": "2026-09-29",
+   "src": "assets/audio/siguiendote.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f4/17/70/f4177044-c124-5e1a-bc73-d0e9f30732a5/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/sigui%C3%A9ndote/6813387762?i=6813387768"
+  },
+  {
+   "title": "DESCONTROLA",
+   "artist": "V12",
+   "release": "DESCONTROLA",
+   "date": "2026-03-05",
+   "src": "assets/audio/descontrola.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/b0/ca/90/b0ca9071-746b-381c-3ffc-fd7bcb75adbf/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/descontrola/1880465234?i=1880465235"
+  },
+  {
+   "title": "Mi Bandi 2.0",
+   "artist": "V12 & Siilva",
+   "release": "Mi Bandi 2.0",
+   "date": "2025-12-19",
+   "src": "assets/audio/mi-bandi-2-0.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/78/20/f2/7820f29b-c998-0707-e8fd-5206ee465801/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/mi-bandi-2-0/1860493571?i=1860493572"
+  },
+  {
+   "title": "RUMBA",
+   "artist": "V12 & NSJ",
+   "release": "RUMBA",
+   "date": "2025-10-06",
+   "src": "assets/audio/rumba.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/59/bf/63/59bf63b6-e4a6-0381-f2ed-33a3e9152aca/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/rumba/1841777054?i=1841777055"
+  },
+  {
+   "title": "sin vernos",
+   "artist": "V12",
+   "release": "sin vernos",
+   "date": "2025-08-25",
+   "src": "assets/audio/sin-vernos.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/c6/c7/66/c6c7662c-9610-810a-8f3c-743d7aa2165d/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/sin-vernos/1835196023?i=1835196024"
+  },
+  {
+   "title": "mi bandi",
+   "artist": "V12",
+   "release": "mi bandi",
+   "date": "2025-07-14",
+   "src": "assets/audio/mi-bandi.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/0e/cb/67/0ecb67f1-2ced-72a8-6989-56fd40a385c0/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/mi-bandi/1825600911?i=1825600912"
+  },
+  {
+   "title": "FANTASIA",
+   "artist": "V12 & More Vertua",
+   "release": "FANTASIA",
+   "date": "2025-06-20",
+   "src": "assets/audio/fantasia.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/4e/15/74/4e157430-a706-5737-db75-cac9bc7168a6/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/fantasia/1820740845?i=1820740847"
+  },
+  {
+   "title": "morocco",
+   "artist": "V12",
+   "release": "morocco",
+   "date": "2025-05-01",
+   "src": "assets/audio/morocco.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/c3/df/17/c3df179a-6c68-db4a-ac50-bbeb919dbe2c/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/morocco/1807518067?i=1807518068"
+  },
+  {
+   "title": "TEXTO",
+   "artist": "V12",
+   "release": "TEXTO",
+   "date": "2025-04-04",
+   "src": "assets/audio/texto.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/46/79/6a/46796a23-2a31-97bc-d32f-c725fc9889ff/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/texto/1798126577?i=1798126578"
+  },
+  {
+   "title": "Espresso",
+   "artist": "V12",
+   "release": "Espresso",
+   "date": "2025-03-09",
+   "src": "assets/audio/espresso.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/58/50/06/58500688-ef2b-cff0-4ab8-ee502075c044/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/espresso/1798800395?i=1798800396"
+  },
+  {
+   "title": "Distante",
+   "artist": "V12",
+   "release": "Distante",
+   "date": "2025-02-10",
+   "src": "assets/audio/distante.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/ee/1f/24/ee1f2423-2c61-feec-3aa0-9010e1f32145/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/distante/1791319733?i=1791319734"
+  },
+  {
+   "title": "Encienda (24louud REMIX)",
+   "artist": "V12",
+   "release": "Encienda (24louud REMIX)",
+   "date": "2025-01-27",
+   "src": "assets/audio/encienda-24louud-remix.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/98/3b/ea/983bea24-e5e4-7c07-1262-43005c835264/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/encienda-24louud-remix/1792980576?i=1792980577"
+  },
+  {
+   "title": "Encienda",
+   "artist": "V12",
+   "release": "Encienda",
+   "date": "2025-01-06",
+   "src": "assets/audio/encienda.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/b7/ab/32/b7ab32f5-30dd-56cd-c6a1-eba02356ae1b/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/encienda/1788129393?i=1788129394"
+  },
+  {
+   "title": "CALLE REMIX (Glassick & Zelig Remix)",
+   "artist": "V12",
+   "release": "CALLE REMIX (Glassick & Zelig Remix)",
+   "date": "2024-07-12",
+   "src": "assets/audio/calle-remix-glassick-zelig-remix.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/de/59/4b/de594b4c-d1c9-f081-5302-596182b2e3c5/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/calle-remix-glassick-zelig-remix/1752084975?i=1752084976"
+  },
+  {
+   "title": "MOJADITA",
+   "artist": "V12",
+   "release": "MOJADITA",
+   "date": "2024-06-01",
+   "src": "assets/audio/mojadita.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/02/92/11/0292111f-837e-65b7-3f5a-2056a3673a67/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/mojadita/1748370929?i=1748370930"
+  },
+  {
+   "title": "Pra",
+   "artist": "V12",
+   "release": "Pra",
+   "date": "2024-03-01",
+   "src": "assets/audio/pra.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/a5/e1/54/a5e15414-2260-b8d5-5c0b-81862ddd685c/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/pra/1730501267?i=1730501269"
+  },
+  {
+   "title": "CALLE",
+   "artist": "V12",
+   "release": "CALLE",
+   "date": "2024-01-24",
+   "src": "assets/audio/calle.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/7a/d5/b5/7ad5b5fa-973e-8de7-04f4-138534bda986/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/calle/1726147638?i=1726147640"
+  },
+  {
+   "title": "ZONA ROJA",
+   "artist": "EL NN BP & V12",
+   "release": "ZONA ROJA",
+   "date": "2023-08-04",
+   "src": "assets/audio/zona-roja.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/73/4c/cf/734ccff0-e2ef-5e08-8bf4-8264c73f9e29/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/zona-roja/1707868476?i=1707868477"
+  },
+  {
+   "title": "Carretera",
+   "artist": "V12 & Geezy Rose",
+   "release": "Carretera",
+   "date": "2023-07-07",
+   "src": "assets/audio/carretera.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/ef/3d/17/ef3d1752-141c-e5a0-6ef4-8593e2bc330c/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/carretera/1695635808?i=1695635810"
+  },
+  {
+   "title": "perder",
+   "artist": "V12",
+   "release": "perder",
+   "date": "2023-03-23",
+   "src": "assets/audio/perder.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/5b/1b/64/5b1b645b-8779-8f19-eecf-8a6042175f72/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/perder/1678638300?i=1678638301"
+  },
+  {
+   "title": "VOLAMOS",
+   "artist": "V12",
+   "release": "VOLAMOS",
+   "date": "2023-03-22",
+   "src": "assets/audio/volamos.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/44/ae/d6/44aed623-8184-4566-a81c-5d9e8e7316cb/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/volamos/1742701722?i=1742701723"
+  },
+  {
+   "title": "yo si se",
+   "artist": "V12",
+   "release": "yo si se",
+   "date": "2023-02-14",
+   "src": "assets/audio/yo-si-se.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/3c/f7/fd/3cf7fd56-ffbd-6413-f945-331578927519/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/yo-si-se/1670455533?i=1670455534"
+  },
+  {
+   "title": "from the start",
+   "artist": "V12",
+   "release": "For the Love of the City - EP",
+   "date": "2023-01-12",
+   "src": "assets/audio/from-the-start.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/c6/f3/f7/c6f3f752-3cf4-cce6-d89d-3d1fe53bc1cc/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/from-the-start-radio-edit/1663371396?i=1663371400"
+  },
+  {
+   "title": "Heat of the Moment",
+   "artist": "V12",
+   "release": "For the Love of the City - EP",
+   "date": "2023-01-12",
+   "src": "assets/audio/heat-of-the-moment.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/c6/f3/f7/c6f3f752-3cf4-cce6-d89d-3d1fe53bc1cc/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/heat-of-the-moment/1663371396?i=1663371401"
+  },
+  {
+   "title": "In 5",
+   "artist": "V12",
+   "release": "For the Love of the City - EP",
+   "date": "2023-01-12",
+   "src": "assets/audio/in-5.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/c6/f3/f7/c6f3f752-3cf4-cce6-d89d-3d1fe53bc1cc/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/in-5/1663371396?i=1663371402"
+  },
+  {
+   "title": "GG Freestyle",
+   "artist": "V12",
+   "release": "For the Love of the City - EP",
+   "date": "2023-01-12",
+   "src": "assets/audio/gg-freestyle.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/c6/f3/f7/c6f3f752-3cf4-cce6-d89d-3d1fe53bc1cc/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/gg-freestyle/1663371396?i=1663371399"
+  },
+  {
+   "title": "Mission",
+   "artist": "V12",
+   "release": "For the Love of the City - EP",
+   "date": "2023-01-12",
+   "src": "assets/audio/mission.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/c6/f3/f7/c6f3f752-3cf4-cce6-d89d-3d1fe53bc1cc/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/mission/1663371396?i=1663371397"
+  },
+  {
+   "title": "despierta",
+   "artist": "V12",
+   "release": "despierta",
+   "date": "2022-08-12",
+   "src": "assets/audio/despierta.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/9e/da/a0/9edaa034-34d1-1752-a099-0a74b1d5e0aa/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/despierta/1637450923?i=1637450925"
+  },
+  {
+   "title": "Casa Del Perreo (feat. Geezy Rose)",
+   "artist": "V12",
+   "release": "Casa Del Perreo (feat. Geezy Rose)",
+   "date": "2022-05-21",
+   "src": "assets/audio/casa-del-perreo-feat-geezy-rose.mp3",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/3c/68/91/3c68917f-ee9f-4cf7-6cf8-bb645140fe10/artwork.jpg/200x200bb.jpg",
+   "apple": "https://music.apple.com/us/album/casa-del-perreo-feat-geezy-rose/1624479036?i=1624479037"
+  }
+ ]
+}
