@@ -144,7 +144,7 @@ h1,h2,h3,h4{line-height:1.12;font-weight:800;letter-spacing:-.02em}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;transition:.18s}
-.card:hover{border-color:var(--line2);transform:translateY(-2px)}
+a.card:hover,.card.plat:hover{border-color:var(--line2);transform:translateY(-2px)}
 .card h3{font-size:18px;margin-bottom:7px}
 .card.pop{background:linear-gradient(165deg,var(--surface2),var(--surface));border-color:var(--line2)}
 .card .ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;
@@ -176,7 +176,7 @@ h1,h2,h3,h4{line-height:1.12;font-weight:800;letter-spacing:-.02em}
   border:1px solid var(--line2);border-radius:999px;padding:4px 6px 4px 18px}
 .field input{flex:1;background:none;border:0;color:#fff;padding:13px 0;outline:none}
 .field input::placeholder{color:var(--mut2)}
-.join .note{font-size:12.5px;color:var(--mut2);margin-top:12px}
+.note{font-size:12.5px;color:var(--mut2);margin-top:12px}
 .ok-msg{display:none;margin-top:16px;padding:14px 18px;border-radius:var(--r-sm);
   background:rgba(233,227,214,.09);border:1px solid rgba(233,227,214,.4);color:var(--bone);font-weight:600}
 .ok-msg.show{display:block}
@@ -219,7 +219,7 @@ h1,h2,h3,h4{line-height:1.12;font-weight:800;letter-spacing:-.02em}
 .raricard .rc-top{align-items:center}
 .raricard .rc-label{display:block;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
 .raricard .rc-top .rc-label{margin:0}
-.raricard .chip{width:44px;height:32px;border-radius:7px;background:linear-gradient(135deg,#eef0f3,#8a8f9c)}
+.raricard .cardchip{width:44px;height:32px;border-radius:7px;background:linear-gradient(135deg,#eef0f3,#8a8f9c)}
 .raricard .rc-mark{display:grid;place-items:center start}
 .raricard .rc-mark img{width:42%;max-width:190px;filter:drop-shadow(0 6px 18px rgba(0,0,0,.5))}
 .raricard .rc-bottom b{display:block;font-family:var(--disp);font-size:clamp(17px,2.2vw,22px);letter-spacing:.08em;line-height:1.1}
@@ -276,7 +276,7 @@ label{font-size:13.5px;font-weight:700;color:var(--mut)}
 .foot h5{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--mut2);margin-bottom:14px}
 .foot a{display:block;color:var(--mut);padding:5px 0;font-size:14.5px}
 .foot a:hover{color:#fff}
-.social{display:flex;gap:10px;margin-top:16px}
+.social{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .social a{width:40px;height:40px;border-radius:11px;background:var(--surface);border:1px solid var(--line);
   display:grid;place-items:center;font-size:16px;color:#fff}
 .social a:hover{border-color:var(--teal);background:var(--surface2)}
@@ -288,7 +288,7 @@ label{font-size:13.5px;font-weight:700;color:var(--mut)}
 .bottombar a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--mut);font-size:10.5px;font-weight:700}
 .bottombar a .ic{font-size:19px}
 .bottombar a.on{color:#fff}
-.bottombar a.join .ic{background:var(--grad-hot);width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#0a0a0b}
+.bottombar a.bb-join .ic{background:var(--grad-hot);width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#0a0a0b}
 
 /* mobile menu drawer */
 .drawer{position:fixed;inset:0;z-index:80;background:rgba(4,5,8,.6);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:.2s}
@@ -416,7 +416,7 @@ body::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opac
 .ticker .dot{color:var(--line2)}
 
 /* globe motif */
-.globe{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;
+.globe{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;
   border:1px solid var(--line2);color:var(--bone);font-size:13px;opacity:.85}
 
 /* deepen cards / hero on jet black */
@@ -682,6 +682,9 @@ body::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opac
 .vthumb .cap{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:26px 12px 11px;
   background:linear-gradient(transparent,rgba(0,0,0,.9));font-weight:700;font-size:13px;
   line-height:1.3;color:var(--ink);
+  /* bottom gap is a transparent border, not padding: line-clamp clips at
+     the padding box, so a 3rd line used to paint into bottom padding */
+  padding-bottom:0;border-bottom:11px solid transparent;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* track rows: the sub-line is its own line, not glued to the title */
@@ -815,3 +818,32 @@ body.noscroll{overflow:hidden}
 .tbtn.kick{--pc:#53fc18;--pc-bg:rgba(83,252,24,.16)}
 .tbtn.youtube{--pc:#ff0000;--pc-bg:rgba(255,0,0,.2)}
 @media (max-width:640px){.tunein .tgrid{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- audit fixes 2026-11-18 ---------- */
+/* footer link rule was written for the link columns; it also hit the
+   footer logo (stacked SOUNDSOF over the mark) and the legal line */
+.foot .brand{display:flex;padding:0}
+.foot .legal a{display:inline;padding:0}
+.foot .social a{display:grid;padding:0}
+/* product cards: equal-height rows, button pinned to the bottom, full width */
+.prod{display:flex;flex-direction:column}
+.prod .body{display:flex;flex-direction:column;flex:1}
+.prod .buy-btn{margin-top:auto;width:100%}
+.prod .price{margin-bottom:12px}
+.card .h-md{font-size:clamp(21px,3vw,30px)}
+.wrap p+p{margin-top:12px}
+main p a,.section p a:not(.btn){text-decoration:underline;text-underline-offset:2px}
+.lchip b{white-space:nowrap}
+.featgrid{grid-template-columns:minmax(0,300px) 1fr}
+.vhero .scrollcue{display:none}
+@media(max-width:640px){
+  [data-shop-grid]{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  [data-shop-grid] .body{padding:12px}
+  [data-shop-grid] .buy-btn{font-size:11.5px;letter-spacing:.03em}
+  .ticker .dot{display:none}
+  .slot{flex-wrap:wrap}
+  .slot .what{flex:1 1 calc(100% - 62px)}
+  .slot .tag{order:3;margin-left:62px}
+  .featgrid{grid-template-columns:1fr}
+  .join .grid-2{grid-template-columns:minmax(0,1fr)}
+}

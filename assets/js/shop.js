@@ -128,7 +128,7 @@
         '<div class="body"><b>' + esc(p.name) + '</b>' +
           '<div class="price">' + esc(priceRange(p)) + '</div>' +
           '<button class="buy-btn" type="button" data-open="' + i + '"' + (sold ? ' disabled' : '') + '>' +
-            (sold ? 'Sold out' : 'Choose size') + '</button>' +
+            (sold ? 'Sold out' : ((p.variants || []).some(variantSize) ? 'Choose size' : 'View options')) + '</button>' +
         '</div></article>';
     }).join('');
   }
