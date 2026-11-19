@@ -52,6 +52,7 @@
     var where = Object.keys(LIVE_NAMES).filter(function (k) { return plats[k] && plats[k].live === true; });
     var href = where.length ? plats[where[0]].url : CFG.tiktok;
     $all('.livebanner, .livepill').forEach(function (el) { el.classList.toggle('on', on); });
+    document.documentElement.classList.toggle('v12-live', on);
     $all('[data-live-link]').forEach(function (a) { a.href = href; });
     $all('.livebanner a').forEach(function (a) {
       a.textContent = '🔴 V12 IS LIVE RIGHT NOW' + (where.length ? ' on ' + where.map(function (k) { return LIVE_NAMES[k]; }).join(' + ') : '') + ' — tap in →';

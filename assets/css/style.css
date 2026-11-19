@@ -859,3 +859,6 @@ main p a,.section p a:not(.btn){text-decoration:underline;text-underline-offset:
 @keyframes livepulse{50%{opacity:.55}}
 .tbtn.is-off{opacity:.78}
 .live-sum{font-weight:700;color:var(--ink);min-height:1.4em;margin-top:6px}
+/* live-only cues: shown only while GET /live says he is on */
+html:not(.v12-live) .onlylive{display:none!important}
+html.v12-live .offlive{display:none!important}
