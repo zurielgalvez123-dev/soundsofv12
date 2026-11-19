@@ -127,9 +127,10 @@ h1,h2,h3,h4{line-height:1.12;font-weight:800;letter-spacing:-.02em}
   background:rgba(233,227,214,.08);border:1px solid rgba(233,227,214,.35);color:var(--bone);
   font-weight:800;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:20px}
 .hero h1{margin:6px 0 16px}
-.hero .stats{display:flex;gap:22px;flex-wrap:wrap;margin-top:26px}
-.hero .stats .s b{font-family:var(--disp);font-size:26px;display:block;line-height:1}
-.hero .stats .s span{font-size:12px;color:var(--mut);letter-spacing:.03em}
+.stats{display:flex;gap:22px;flex-wrap:wrap}
+.hero .stats{margin-top:26px}
+.stats .s b{font-family:var(--disp);font-size:26px;display:block;line-height:1}
+.stats .s span{font-size:12px;color:var(--mut);letter-spacing:.03em}
 .hero-art{position:relative;aspect-ratio:1/1;border-radius:var(--r-lg);overflow:hidden;
   background:linear-gradient(160deg,#1a0d10,#0a0b12 60%);border:1px solid var(--line);box-shadow:var(--shadow)}
 .hero-art .disc{position:absolute;inset:0;display:grid;place-items:center}
@@ -208,15 +209,21 @@ h1,h2,h3,h4{line-height:1.12;font-weight:800;letter-spacing:-.02em}
 /* Flex column so `.no { margin-top:auto }` below can do what it was
    written to do — push the card number down to the base. Without it the
    card laid everything out at the top and left a dead slab underneath. */
-.raricard{aspect-ratio:1.6/1;border-radius:20px;padding:22px;position:relative;overflow:hidden;
-  display:flex;flex-direction:column;
+.raricard{aspect-ratio:1.586/1;width:100%;max-width:480px;margin-inline:auto;border-radius:20px;padding:clamp(18px,4.5%,28px);
+  position:relative;overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;
   background:linear-gradient(135deg,#1a0e12,#0b0c14);border:1px solid var(--line2);box-shadow:var(--shadow)}
 .raricard::after{content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;
-  background:var(--grad-hot);filter:blur(50px);opacity:.5}
-.raricard .top{display:flex;justify-content:space-between;position:relative}
-.raricard .chip{width:42px;height:30px;border-radius:7px;background:linear-gradient(135deg,#eef0f3,#8a8f9c)}
-.raricard .no{font-family:var(--disp);font-size:20px;letter-spacing:.14em;margin-top:auto;position:relative}
-.raricard .foot{display:flex;justify-content:space-between;align-items:end;position:relative;margin-top:14px}
+  background:var(--grad-hot);filter:blur(50px);opacity:.5;pointer-events:none}
+.raricard>*{position:relative;z-index:1}
+.raricard .rc-top,.raricard .rc-bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+.raricard .rc-top{align-items:center}
+.raricard .rc-label{display:block;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+.raricard .rc-top .rc-label{margin:0}
+.raricard .chip{width:44px;height:32px;border-radius:7px;background:linear-gradient(135deg,#eef0f3,#8a8f9c)}
+.raricard .rc-mark{display:grid;place-items:center start}
+.raricard .rc-mark img{width:42%;max-width:190px;filter:drop-shadow(0 6px 18px rgba(0,0,0,.5))}
+.raricard .rc-bottom b{display:block;font-family:var(--disp);font-size:clamp(17px,2.2vw,22px);letter-spacing:.08em;line-height:1.1}
+.raricard .rc-bottom .r{text-align:right}
 
 /* steps / list */
 .steps{list-style:none;counter-reset:s}
@@ -790,9 +797,9 @@ body.noscroll{overflow:hidden}
 .poll .note{margin-top:4px}
 
 /* the Rari card only claims a number once one has been issued */
-.raricard .no{transition:color .3s}
-.raricard:not(.claimed) .no,.raricard:not(.claimed) .foot b{color:var(--mut2)}
-.raricard.claimed .no{color:var(--bone)}
+.raricard .rc-bottom b{transition:color .3s}
+.raricard:not(.claimed) .rc-bottom b{color:var(--mut2)}
+.raricard.claimed [data-rari-no]{color:var(--bone)}
 
 /* ---------- TUNE IN NOW — one tap to each stream ---------- */
 .tunein{max-width:640px}

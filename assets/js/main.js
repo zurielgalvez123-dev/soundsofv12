@@ -201,8 +201,8 @@
 
     if (noEl) {
       noEl.textContent = no
-        ? 'RARI · #' + String(no).padStart(4, '0')
-        : 'RARI · #———';
+        ? '#' + String(no).padStart(4, '0')
+        : '#————';
     }
     if (nameEl) {
       if (name) nameEl.textContent = name.toUpperCase();
