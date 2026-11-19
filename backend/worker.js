@@ -335,6 +335,85 @@ async function sendWelcome(env, email) {
   return { status, providerId, error: errText };
 }
 
+// ---------- live status ----------
+// One question per platform, asked of each platform's own public page or
+// endpoint. Each check answers true / false, or null when the platform
+// did not answer in a form we recognise — null is shown as "unknown",
+// never as "offline", so a blocked check cannot claim he is not live.
+const STREAMS = {
+  twitch: "https://www.twitch.tv/soundsofv12",
+  tiktok: "https://www.tiktok.com/@soundsofv12/live",
+  kick: "https://kick.com/soundsofv12",
+  youtube: "https://www.youtube.com/@soundsofv12/live",
+};
+const YT_CHANNEL_ID = "UCwj0odm-AXIYZQuqajK4lLA";
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
+const LIVE_CACHE_SECONDS = 60;
+
+async function timed(promise, ms = 6000) {
+  let t;
+  const timeout = new Promise((_, rej) => { t = setTimeout(() => rej(new Error("timeout")), ms); });
+  try { return await Promise.race([promise, timeout]); } finally { clearTimeout(t); }
+}
+
+const LIVE_CHECKS = {
+  // Twitch's own web client id answers anonymous GQL reads.
+  async twitch() {
+    const r = await fetch("https://gql.twitch.tv/gql", {
+      method: "POST",
+      headers: { "Client-Id": "kimne78kx3ncx6brgo4mv6wki5h1ko", "Content-Type": "application/json" },
+      body: JSON.stringify({ query: '{user(login:"soundsofv12"){stream{id}}}' }),
+    });
+    const d = await r.json();
+    const u = d && d.data && d.data.user;
+    return u ? !!u.stream : null;
+  },
+  // status 2 = live, 4 = offline.
+  async tiktok() {
+    const r = await fetch(
+      "https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId=soundsofv12&sourceType=54",
+      { headers: { "User-Agent": BROWSER_UA } }
+    );
+    const d = await r.json();
+    const st = d && d.data && d.data.user && d.data.user.status;
+    return typeof st === "number" ? st === 2 : null;
+  },
+  async kick() {
+    const r = await fetch("https://kick.com/api/v2/channels/soundsofv12", {
+      headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d && "livestream" in d ? !!d.livestream : null;
+  },
+  // /live redirects to the broadcast when one is on; an upcoming premiere
+  // also has a watch canonical, so "isLive":true is required as well.
+  async youtube() {
+    const r = await fetch(`https://www.youtube.com/channel/${YT_CHANNEL_ID}/live`, {
+      headers: { "User-Agent": BROWSER_UA, "Accept-Language": "en", Cookie: "CONSENT=YES+1" },
+    });
+    const html = await r.text();
+    const canon = (html.match(/<link rel="canonical" href="([^"]+)"/) || [])[1];
+    if (!canon) return null;
+    return canon.includes("/watch?v=") && html.includes('"isLive":true');
+  },
+};
+
+async function liveStatus() {
+  const names = Object.keys(LIVE_CHECKS);
+  const results = await Promise.all(
+    names.map((n) => timed(LIVE_CHECKS[n]()).catch(() => null))
+  );
+  const platforms = {};
+  names.forEach((n, i) => { platforms[n] = { live: results[i], url: STREAMS[n] }; });
+  return {
+    live: results.some((v) => v === true),
+    platforms,
+    checked_at: new Date().toISOString(),
+  };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -439,6 +518,32 @@ export default {
             },
           }
         );
+      }
+
+      // ---------- live status ----------
+      // Shared by every visitor through the edge cache, so the platforms
+      // see one check a minute however busy the site is.
+      if (path === "/live" && request.method === "GET") {
+        const cache = caches.default;
+        // Keyed by host: preview versions share this cache zone.
+        const key = new Request("https://" + url.host + "/__live_cache");
+        let hit = await cache.match(key);
+        let body;
+        if (hit) {
+          body = await hit.text();
+        } else {
+          body = JSON.stringify(await liveStatus());
+          ctx.waitUntil(cache.put(key, new Response(body, {
+            headers: { "Cache-Control": `public, max-age=${LIVE_CACHE_SECONDS}` },
+          })));
+        }
+        return new Response(body, {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": `public, max-age=${LIVE_CACHE_SECONDS}`,
+            ...corsHeaders(request, env),
+          },
+        });
       }
 
       // ---------- booking ----------

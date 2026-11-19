@@ -15,8 +15,6 @@
     // With neither configured the form does NOT claim success — it
     // says signups aren't open, because nothing is delivered anywhere.
     joinEndpoint: '',
-    // When live, flip via localStorage 'v12_live'='1' OR a real API poll.
-    liveOverride: null           // true / false to force; null = auto (localStorage)
   };
 
   var API = window.V12_API || null;
@@ -40,21 +38,49 @@
     if (e.target === drawer || e.target.closest('.x') || e.target.tagName === 'A') drawer.classList.remove('open');
   });
 
-  /* ---------- LIVE status ---------- */
-  function isLive() {
-    if (CFG.liveOverride !== null) return CFG.liveOverride;
-    return store('v12_live') === '1';
-  }
-  function paintLive() {
-    var on = isLive();
+  /* ---------- LIVE status ----------
+     GET /live on our Worker checks Twitch, TikTok, Kick and YouTube
+     (edge-cached for a minute) and answers per platform: true, false,
+     or null when a platform could not be read. Null shows nothing, so a
+     check that failed never tells a fan he is offline when he is not.
+     ?live=1 / ?live=0 in the URL forces the look for testing. */
+  var LIVE_NAMES = { twitch: 'Twitch', tiktok: 'TikTok', kick: 'Kick', youtube: 'YouTube' };
+  function paintLive(d) {
+    var force = /[?&]live=([01])/.exec(location.search);
+    var plats = (d && d.platforms) || {};
+    var on = force ? force[1] === '1' : !!(d && d.live);
+    var where = Object.keys(LIVE_NAMES).filter(function (k) { return plats[k] && plats[k].live === true; });
+    var href = where.length ? plats[where[0]].url : CFG.tiktok;
     $all('.livebanner, .livepill').forEach(function (el) { el.classList.toggle('on', on); });
-    $all('[data-live-link]').forEach(function (a) { a.href = CFG.tiktok; });
+    $all('[data-live-link]').forEach(function (a) { a.href = href; });
+    $all('.livebanner a').forEach(function (a) {
+      a.textContent = '🔴 V12 IS LIVE RIGHT NOW' + (where.length ? ' on ' + where.map(function (k) { return LIVE_NAMES[k]; }).join(' + ') : '') + ' — tap in →';
+    });
+    $all('.tbtn').forEach(function (btn) {
+      var k = Object.keys(LIVE_NAMES).filter(function (n) { return btn.classList.contains(n); })[0];
+      var st = k && plats[k] ? plats[k].live : null;
+      btn.classList.toggle('is-live', st === true);
+      btn.classList.toggle('is-off', st === false);
+      var tag = btn.querySelector('.lstate');
+      if (st === null || st === undefined) { if (tag) tag.remove(); return; }
+      if (!tag) { tag = document.createElement('span'); tag.className = 'lstate'; btn.appendChild(tag); }
+      tag.textContent = st ? 'LIVE NOW' : 'Offline';
+    });
+    $all('[data-live-summary]').forEach(function (el) {
+      el.textContent = !d ? '' : on
+        ? 'He’s live right now on ' + where.map(function (k) { return LIVE_NAMES[k]; }).join(' and ') + '.'
+        : 'He’s not live right now. Get a Rari alert for the next one.';
+    });
   }
-  paintLive();
-  // lets you demo it: type v12live() in console, or ?live=1 in URL
-  if (/[?&]live=1/.test(location.search)) { store('v12_live', '1'); paintLive(); }
-  if (/[?&]live=0/.test(location.search)) { store('v12_live', '0'); paintLive(); }
-  window.v12live = function (on) { store('v12_live', on === false ? '0' : '1'); paintLive(); return isLive(); };
+  var LIVE_API = ((window.V12_CONFIG && window.V12_CONFIG.apiUrl) || '').replace(/\/+$/, '');
+  function checkLive() {
+    if (!LIVE_API) return;
+    fetch(LIVE_API + '/live').then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d) paintLive(d); }).catch(function () {});
+  }
+  paintLive(null);
+  checkLive();
+  setInterval(function () { if (!document.hidden) checkLive(); }, 60000);
 
   /* ---------- Join the Rari's ---------- */
   $all('form[data-join]').forEach(function (form) {

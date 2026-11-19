@@ -849,3 +849,13 @@ main p a,.section p a:not(.btn){text-decoration:underline;text-underline-offset:
 }
 .post .postart{width:100%;height:auto;max-width:300px;aspect-ratio:1;object-fit:cover;border-radius:14px;display:block}
 .post .btn{padding:11px 18px;font-size:14px}
+
+/* live state on the platform buttons (set from GET /live) */
+.tbtn{position:relative}
+.tbtn .lstate{align-self:flex-start;margin-top:5px;font:800 9.5px/1 Sora,sans-serif;letter-spacing:.12em;text-transform:uppercase;
+  padding:4px 7px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--mut2)}
+.tbtn.is-live{background:var(--pc-bg);border-color:var(--pc);box-shadow:0 0 0 1px var(--pc),0 10px 30px -10px var(--pc)}
+.tbtn.is-live .lstate{background:var(--red);color:#fff;animation:livepulse 1.6s ease-in-out infinite}
+@keyframes livepulse{50%{opacity:.55}}
+.tbtn.is-off{opacity:.78}
+.live-sum{font-weight:700;color:var(--ink);min-height:1.4em;margin-top:6px}
