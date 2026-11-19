@@ -111,7 +111,11 @@
            'New drops land here first — get on the list and you will know before anyone.</p>');
       return;
     }
-    grid.innerHTML = state.products.map(function (p, i) {
+    // The homepage shows a few pieces from the same live catalogue
+    // (data-shop-limit); the indexes still point into the full list, so
+    // the size sheet and bag work the same on both pages.
+    var limit = parseInt(grid.getAttribute('data-shop-limit'), 10) || state.products.length;
+    grid.innerHTML = state.products.slice(0, limit).map(function (p, i) {
       var img = image(p);
       var sold = (p.variants || []).length && !p.variants.some(inStock);
       return '<article class="prod rv in" data-i="' + i + '">' +
